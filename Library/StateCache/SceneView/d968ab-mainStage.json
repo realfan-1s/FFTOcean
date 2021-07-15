@@ -1,0 +1,5 @@
+<<<<<<< HEAD
+﻿{"cameraMode":{"drawMode":0,"name":"Shaded","section":"Shading Mode"},"sceneLighting":true,"audioPlay":false,"sceneViewState":{"showFog":true,"showMaterialUpdate":true,"showSkybox":true,"showFlares":true,"showImageEffects":true,"showParticleSystems":true},"in2DMode":false,"pivot":{"x":-51.14700698852539,"y":18.57111358642578,"z":-67.03067779541016},"rotation":{"x":-0.2011922001838684,"y":-0.5957595109939575,"z":0.15740340948104859,"w":-0.7614701390266419},"size":88.46994018554688,"orthographic":false}
+=======
+﻿{"cameraMode":{"drawMode":0,"name":"Shaded","section":"Shading Mode"},"sceneLighting":true,"audioPlay":false,"sceneViewState":{"showFog":true,"showMaterialUpdate":true,"showSkybox":true,"showFlares":true,"showImageEffects":true,"showParticleSystems":true},"in2DMode":false,"pivot":{"x":-124.48534393310547,"y":-16.58465576171875,"z":-47.77163314819336},"rotation":{"x":0.10131427645683289,"y":0.25460559129714968,"z":-0.026832284405827524,"w":0.9613484740257263},"size":97.63915252685547,"orthographic":true}
+>>>>>>> 2a6e1a0 (“Day3”)

@@ -1,0 +1,271 @@
+﻿#pragma kernel ComputeGaussian
+#pragma kernel CreateHeightSpectrum
+#pragma kernel CreateDisplaceSpectrum
+#pragma kernel FFTHorizontal
+#pragma kernel FFTVertical
+#pragma kernel FFTHorizontalEnd
+#pragma kernel FFTVerticalEnd
+#pragma kernel GenerateDisplaceTexture
+#pragma kernel GenerateBubblesAndNormals
+
+#include "Common.compute"
+
+uint textureSize; // 纹理的大小
+float oceanLength; // 每一块海洋的高度
+float A; // phillips频谱参数
+float4 windAndSeed; // 风力大小(xy),随机数种子(zw)
+uint randState;
+float time;
+float heightScale; // 高度的权重
+float lambda; // 偏移权重
+uint Ns; // Ms = pow(2, m - 1),m表示第几阶段
+float bubbleThreshold; // 泡沫阈值
+float bubbleScale;
+
+RWTexture2D<float4> gaussianRT; // 将高斯随机数存为纹理
+RWTexture2D<float4> heightSpectrumRT; // 将高度频谱存为纹理
+RWTexture2D<float4> displaceXSpectrumRT; // 将偏移频谱存为纹理
+RWTexture2D<float4> displaceZSpectrumRT; // 将偏移频谱存为纹理
+RWTexture2D<float4> displaceRT; // 总偏移纹理
+RWTexture2D<float4> inputRT; // 输入纹理
+RWTexture2D<float4> outputRT; // 输出纹理
+RWTexture2D<float4> normalRT; //法线纹理
+RWTexture2D<float4> bubblesRT;//泡沫纹理
+
+float DonelanBannerDirectionalSpreading(float2 k);
+float Phillips(float2 k);
+uint WangHash(uint seed);
+float Rand();
+float2 Gaussian(float2 id);
+float Dispersion(float2 k);
+float2 ComplexMul(float2 com1, float2 com2);
+
+// 生成高斯分布图
+[numthreads(8, 8, 1)]
+void ComputeGaussian(uint3 id : SV_DISPATCHTHREADID){
+    float2 g = Gaussian(id.xy);
+    gaussianRT[id.xy] = float4(g, 0, 0);
+}
+
+// 生成高度频率图
+[numthreads(8, 8, 1)]
+void CreateHeightSpectrum(uint3 id : SV_DISPATCHTHREADID){
+    float2 k = float2(2.0 * PI * id.x / textureSize - PI, 2.0 * PI * id.y / textureSize - PI);
+    float2 gaussian = gaussianRT[id.xy].xy;
+    float2 hide0 = gaussian * sqrt(abs(Phillips(k) * DonelanBannerDirectionalSpreading(k)) / 2.0);
+
+    // 计算hide0(-k)的共轭复数
+    float2 hide0Conj = gaussian * sqrt(abs(Phillips(-k) * DonelanBannerDirectionalSpreading(-k)) / 2.0);
+    hide0Conj.y *= -1;
+
+    // 欧拉公式将对数幂转化为三角函数
+    float omega = Dispersion(k) * time;
+    float c = cos(omega);
+    float s = sin(omega);
+
+    float2 ans = ComplexMul(hide0, float2(c, s)) + ComplexMul(hide0Conj, float2(c, -s));
+
+    heightSpectrumRT[id.xy] = float4(ans, 0, 0);
+}
+
+// 生成XZ偏移距离频率图
+[numthreads(8, 8, 1)]
+void CreateDisplaceSpectrum(uint3 id : SV_DISPATCHTHREADID){
+    float2 k = float2(2 * PI * id.x / textureSize - PI, 2 * PI *id.y / textureSize - PI);
+    k /= max(0.001, length(k));
+    float2 displaceX = ComplexMul(float2(0, -k.x), heightSpectrumRT[id.xy].xy);
+    float2 displaceZ = ComplexMul(float2(0, -k.y), heightSpectrumRT[id.xy].xy);
+
+    displaceXSpectrumRT[id.xy] = float4(displaceX, 0, 0);
+    displaceZSpectrumRT[id.xy] = float4(displaceZ, 0, 0);
+}
+
+// X轴FFT
+[numthreads(8, 8, 1)]
+void FFTHorizontal(uint3 id : SV_DISPATCHTHREADID){
+    uint2 idxs = id.xy;
+    // 计算出输入索引
+    idxs.x = floor(id.x / (Ns * 2.0)) * Ns + id.x % Ns;
+    // 计算权重值
+    float angle = 2.0 * PI * (id.x / (Ns * 2.0));
+    float2 w = float2(cos(angle), sin(angle));
+    // 进行复数乘法，随后相加输出
+    float2 x0 = inputRT[idxs].xy;
+    float2 x1 = inputRT[int2(idxs.x + textureSize * 0.5, idxs.y)].xy;
+    outputRT[id.xy] = float4(x0 + ComplexMul(x1, w), 0, 0);
+}
+
+// Y轴FFT
+[numthreads(8, 8, 1)]
+void FFTVertical(uint3 id : SV_DISPATCHTHREADID){
+    uint2 idxs = id.xy;
+    // 计算出输入索引
+    idxs.y = floor(id.y / (Ns * 2.0)) * Ns + id.y % Ns;
+    // 计算权重值
+    float angle = 2.0 * PI * (id.y / (Ns * 2.0));
+    float2 w = float2(cos(angle), sin(angle));
+    // 进行复数乘法，随后相加输出
+    float2 x0 = inputRT[idxs].xy;
+    float2 x1 = inputRT[int2(idxs.x, idxs.y + textureSize * 0.5)].xy;
+    outputRT[id.xy] = float4(x0 + ComplexMul(x1, w), 0, 0);
+}
+
+[numthreads(8, 8, 1)]
+void FFTHorizontalEnd(uint3 id :SV_DISPATCHTHREADID){
+    uint2 idxs = id.xy;
+    // 计算出输入索引
+    idxs.x = floor(id.x / (Ns * 2.0)) * Ns + id.x % Ns;
+    // 计算权重值
+    float angle = 2 * PI * (id.x / (Ns * 2.0));
+    float2 w = float2(cos(angle), sin(angle));
+    w *= -1;
+
+    // 进行复数乘法，随后相加输出
+    float2 x0 = inputRT[idxs].xy;
+    float2 x1 = inputRT[int2(idxs.x + textureSize * 0.5, idxs.y)].xy;
+    float2 ans = x0 + ComplexMul(x1, w);
+    int x = id.x - textureSize * 0.5;
+    ans *= ((x + 1) % 2.0f)  + (x % 2.0f) * (-1);
+    outputRT[id.xy] = float4(ans, 0, 0);
+}
+
+[numthreads(8, 8, 1)]
+void FFTVerticalEnd(uint3 id : SV_DISPATCHTHREADID){
+    uint2 idxs = id.xy;
+    // 计算出输入索引
+    idxs.y = floor(id.y / (Ns * 2.0)) * Ns + id.y % Ns;
+    // 计算权重值
+    float angle = 2.0 * PI * (id.y / (Ns * 2.0));
+    float2 w = float2(cos(angle), sin(angle));
+    w *= -1;
+
+    // 进行复数乘法，随后相加输出
+    float2 x0 = inputRT[idxs].xy;
+    float2 x1 = inputRT[int2(idxs.x, idxs.y + textureSize * 0.5)].xy;
+    float2 ans = x0 + ComplexMul(x1, w);
+    int x = id.y - textureSize * 0.5;
+    ans *= ((x + 1) % 2.0f)  + (x % 2.0f) * (-1);
+    outputRT[id.xy] = float4(ans, 0, 0);
+}
+
+// 生成偏移纹理贴图
+[numthreads(8, 8, 1)]
+void GenerateDisplaceTexture(uint3 id : SV_DISPATCHTHREADID){
+    float y = length(heightSpectrumRT[id.xy].xy) / pow(textureSize, 2) * heightScale; // 生成高度
+    float x = length(displaceXSpectrumRT[id.xy].xy) / pow(textureSize, 2) * lambda; // 生成横向偏移
+    float z = length(displaceZSpectrumRT[id.xy].xy) / pow(textureSize, 2) * lambda; // 生成纵向偏移
+
+    heightSpectrumRT[id.xy] = float4(y, y, y, 0);
+    displaceXSpectrumRT[id.xy] = float4(x, x, x, 0);
+    displaceZSpectrumRT[id.xy] = float4(z, z, z, 0);
+    displaceRT[id.xy] = float4(x, y, z, 0);
+}
+
+[numthreads(8, 8, 1)]
+void GenerateBubblesAndNormals(uint3 id : SV_DISPATCHTHREADID){
+    // 先计算两点间的单位长度
+    float uLength = oceanLength / (textureSize - 1.0);
+    // 获取当前点周围的四个点坐标
+    uint2 uvX1 = uint2((id.x - 1.0 + textureSize) % textureSize, id.y);
+    uint2 uvX2 = uint2((id.x + 1.0 + textureSize) % textureSize, id.y);
+    uint2 uvZ1 = uint2(id.x, (id.y - 1.0 + textureSize) % textureSize);
+    uint2 uvZ2 = uint2(id.x, (id.y + 1.0 + textureSize) % textureSize);
+
+    // 以当前点为中心，获取周围四个点的偏移值
+    float3 x1D = displaceRT[uvX1].xyz;
+    float3 x2D = displaceRT[uvX2].xyz;
+    float3 z1D = displaceRT[uvZ1].xyz;
+    float3 z2D = displaceRT[uvZ2].xyz;
+    // 将当前点视为原点，构建周围四个点的坐标
+    float3 x1 = float3(x1D.x - uLength, x1D.yz);
+    float3 x2 = float3(x2D.x + uLength, x2D.yz);
+    float3 z1 = float3(z1D.xy, z1D.z - uLength);
+    float3 z2 = float3(z2D.xy, z2D.z + uLength);
+    // 计算切向量和法线
+    float3 tangetX = x2 - x1;
+    float3 tangetZ = z2 - z1;
+    float3 normal = normalize(cross(tangetZ, tangetX));
+
+    // 雅可比行列式计算泡沫
+    float3 ddx = x2D - x1D;
+    float3 ddz = z2D - z1D;
+
+    float jacobian = (1.0f + ddx.x) * (1.0f + ddz.z) - ddx.z * ddz.x;
+    jacobian = saturate(max(0, bubbleThreshold - saturate(jacobian)) * bubbleScale);
+    normalRT[id.xy] = float4(normal, 0);
+    bubblesRT[id.xy] = float4(jacobian, jacobian, jacobian, 0);
+}
+
+// 方向拓展，w为角频率，theta是波相对于风的角度，Wp是峰值频率=0.855g/U,g为重力加速度，U是平均风速
+float DonelanBannerDirectionalSpreading(float2 k){
+    float omegaP= 0.855 * G / length(windAndSeed.xy);
+    float ratios = Dispersion(k) / omegaP;
+    float beta;
+    if (ratios > 0.56 && ratios < 0.95){
+        beta = 2.61 * pow(ratios, 1.3);
+    }
+    if (ratios >= 0.95 && ratios < 1.6){
+        beta = 2.28 * pow(ratios, -1.3);
+    }
+    if (ratios > 1.6){
+        float sigma = -0.4 + 0.8393 * exp(-0.567 * log(pow(ratios, 2)));
+        beta = pow(10, sigma);
+    }
+    float theta = atan2(k.y, k.x) - atan2(windAndSeed.y, windAndSeed.x);
+    return beta / max(1e-7, 2.0f * tanh(beta * PI) * pow(cosh(beta * theta), 2));
+    // return beta / max(1e-6, 2.0 * tanh(beta * PI) * pow(cosh(beta * theta), 2));
+}
+
+// 计算phillips频谱
+float Phillips(float2 k){
+    float len = max(0.001, length(k));
+    // L = 风速^2 / G
+    float L = length(windAndSeed.xy);
+    L = pow(pow(L, 2) / G, 2);
+
+    // 风向w, 公式参考https://zhuanlan.zhihu.com/p/96811613
+    float w = L * pow(0.001, 2);
+
+    // 计算phillps频谱,https://zhuanlan.zhihu.com/p/64414956
+    return A * exp(-1.0 / (pow(len, 2) * L)) / pow(len, 4) * exp(-pow(len, 2) * w);
+}
+
+// 高斯随机数种子
+uint WangHash(uint seed){
+    seed = (seed ^ 61) ^(seed >> 16);
+    seed *= 9;
+    seed = seed ^(seed >> 4);
+    seed *= 0x27d4eb2d;
+    seed = seed ^(seed >> 15);
+    return seed;
+}
+
+float Rand(){
+    // Xorshift算法
+    randState ^= (randState << 13);
+    randState ^= (randState >> 17);
+    randState ^= (randState << 5);
+    return randState / 4294967296.0;
+}
+
+// 生成高斯随机数
+float2 Gaussian(float2 id){
+    // 随机数均匀分布
+    randState = WangHash(id.y * textureSize + id.x);
+    float x1 = max(1e-6f, Rand());
+    float x2 = max(1e-6f, Rand());
+    // 计算两个独立的高斯随机数，将两者作为xAxis和yAxis
+    float xAxis = sqrt(-2.0 * log(x1)) * cos(2.0 * PI * x2);
+    float YAxis = sqrt(-2.0 * log(x1)) * sin(2.0 * PI * x2);
+    return float2(xAxis, YAxis);
+}
+
+// 弥散计算
+float Dispersion(float2 k){
+    return sqrt(G * length(k));
+}
+
+// 复数乘法
+float2 ComplexMul(float2 com1, float2 com2){
+    return float2(com1.x * com2.x - com1.y * com2.y, com1.x * com2.y + com1.y * com2.x);
+}
