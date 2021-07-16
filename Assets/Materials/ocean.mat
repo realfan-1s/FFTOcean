@@ -41,11 +41,12 @@ Material:
     - _Glossiness: 1
     - _Metallic: 1
     - _Mips: 3.13
-    - _Roughness: 0.03
+    - _Roughness: 0.1
+    - _SubSurfaceStrength: 0.29
     m_Colors:
     - _BubbleColor: {r: 1, g: 1, b: 1, a: 1}
     - _Color: {r: 0.10215378, g: 0, b: 1, a: 1}
-    - _DeepColor: {r: 0.05882353, g: 0.15686275, b: 0.21568628, a: 1}
-    - _ShallowColor: {r: 0.26192597, g: 0.43871745, b: 0.509434, a: 1}
+    - _DeepColor: {r: 0.09803922, g: 0.3137255, b: 0.29360595, a: 1}
+    - _ShallowColor: {r: 0.11764706, g: 0.3529412, b: 0.49019608, a: 1}
     - _Specular: {r: 1, g: 1, b: 1, a: 1}
     - _SpecularColor: {r: 0.31132078, g: 0.31132078, b: 0.31132078, a: 1}

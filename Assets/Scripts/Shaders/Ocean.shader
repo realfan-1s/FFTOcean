@@ -21,6 +21,7 @@ Shader "Custom/Ocean"
         _FresnelRatio("FresnelRatio", Range(0, 1)) = 0.5
         */
         _Roughness("roughness", Range(0, 1)) = 0.5
+        _SubSurfaceStrength("SubSurfaceStrength", Range(0, 1)) = 0.1
         [HideInInspector]_Displace ("_Displace", 2D) = "white" {}
         [HideInInspector]_Normal("_Normal", 2D) = "white" {}
         [HideInInspector]_Bubbles("_Bubbles", 2D) = "White" {}
@@ -68,6 +69,7 @@ Shader "Custom/Ocean"
             // float _Gloss;
             // fixed _FresnelRatio;
             fixed _Roughness;
+            fixed _SubSurfaceStrength;
 
             // F(V, H) = F0 + (1 - F0) * pow(1 - (l * h)), 5)
             inline half3 FresnelSchlick(half3 col, half ldoth){
@@ -100,6 +102,11 @@ Shader "Custom/Ocean"
                 half lambdaV = ndotl * (ndotv * (1 - r2) + r2);
                 half lambdaL = ndotv * (ndotl * (1 - r2) + r2);
                 return 0.5 / (lambdaL + lambdaV + 1e-5f);
+            }
+
+            inline half SchlickPhaseFunc(half ldotv, half ndotv, fixed rough){
+                half theta = 4 * pow(1 + rough * cos(ldotv), 2);
+                return ndotv * UNITY_INV_PI * (1 - rough) * (1 + rough) / theta;
             }
 
             v2f vert(input v){
@@ -152,14 +159,15 @@ Shader "Custom/Ocean"
                 half D = GGXTerm(r2, ndoth);
                 half3 F = FresnelSchlick(envMap, ldoth);
                 half3 specualr = V * D * F;
-                // TODO:IBL项,基于图像的间接光照
                 half mips = _Roughness * (1.7 - 0.7 * _Roughness) * 6;
                 // 通过掠射角得到更加真实的菲涅尔反射效果，同时考虑了材质粗糙度的影响
                 half grazingTerm = saturate(2 - _Roughness - oneMinusReflective);
                 half surfaceReduction = 1.0 / (r2 + 1.0);
                 half3 indirectiveSpceular = surfaceReduction * envMap.rgb * FresnelLerp(_SpecularColor, grazingTerm, ndotv);
+                // TODO:水体次表面散射
+                half3 SubSurfaceScatter = envMap.rgb * SchlickPhaseFunc(ldotv, ndotv, _SubSurfaceStrength);
 
-                half3 col = UNITY_LIGHTMODEL_AMBIENT.rgb + UNITY_PI * (specualr + diffuse) * ndotl + indirectiveSpceular;
+                half3 col = UNITY_LIGHTMODEL_AMBIENT.rgb + UNITY_PI * (specualr + diffuse) * ndotl + indirectiveSpceular + SubSurfaceScatter;
                 return half4(col, 1);
             }
             ENDCG
