@@ -36,9 +36,13 @@
     <ImplicitlyExpandDesignTimeFacades>false</ImplicitlyExpandDesignTimeFacades>
   </PropertyGroup>
   <ItemGroup>
-     <Compile Include="Assets\Scripts\Controller\CDLOD-CPU\IDetector.cs" />
+     <Compile Include="Assets\Scripts\Controller\CDLOD-CPU\SceneDetector\IDetector.cs" />
+     <Compile Include="Assets\Scripts\Controller\CDLOD-CPU\SceneDetector\SceneDetector.cs" />
      <Compile Include="Assets\Scripts\Controller\CDLOD-CPU\Tree\ISceneObject.cs" />
+     <Compile Include="Assets\Scripts\Controller\CDLOD-CPU\Tree\ISceneSeparateTree.cs" />
+     <Compile Include="Assets\Scripts\Controller\CDLOD-CPU\Tree\QuadTree.cs" />
      <Compile Include="Assets\Scripts\Controller\Ocean.cs" />
+     <Compile Include="Assets\Scripts\Controller\Test.cs" />
      <Compile Include="Assets\Scripts\PriorityQueue.cs" />
      <None Include="Assets\Scripts\Shaders\Common.compute" />
      <None Include="Assets\Scripts\Shaders\Ocean.shader" />

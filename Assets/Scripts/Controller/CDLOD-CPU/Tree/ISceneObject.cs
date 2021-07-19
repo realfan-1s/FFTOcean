@@ -8,3 +8,10 @@ public interface ISceneObject
     void Unload();
     void Load(Transform parent);
 }
+
+public interface ILinkedListNode
+{
+    Dictionary<uint, System.Object> GetNode();
+    LinkedListNode<T> GetLinkedListNode<T>(uint id) where T : ISceneObject;
+    void SetLinkedListNode<T>(uint id, LinkedListNode<T> node);
+}
