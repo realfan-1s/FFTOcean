@@ -14,7 +14,7 @@ public class SceneDetector : MonoBehaviour, IDetector
         throw new System.NotImplementedException();
     }
 
-    public bool isDectcted(Bounds bounds)
+    public bool isDetected(Bounds bounds)
     {
         throw new System.NotImplementedException();
     }

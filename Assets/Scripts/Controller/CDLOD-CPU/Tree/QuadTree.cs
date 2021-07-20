@@ -75,7 +75,7 @@ public class QuadTree<T> : ISceneSeparateTree<T> where T : ISceneObject, ILinked
         }
         else
         {
-            OnNodeTrigger(detector, handler, 0, curBounds.center, 0.5f * curBounds.size);
+            OnNodeTrigger(detector, handler, 0, curBounds.center, curBounds.size);
         }
     }
     public void Add(T node)
@@ -102,6 +102,7 @@ public class QuadTree<T> : ISceneSeparateTree<T> where T : ISceneObject, ILinked
     /// |1|4
     private void OnNodeTrigger(IDetector detector, TriggerHandler<T> handler, int depth, Vector3 center, Vector3 size)
     {
+        size *= 0.5f;
         float centerX = center.x, centerZ = center.z, sizeX = size.x, sizeZ = size.z;
         if (depth == curMaxDepth)
         {
@@ -135,10 +136,43 @@ public class QuadTree<T> : ISceneSeparateTree<T> where T : ISceneObject, ILinked
             }
         }
     }
-    // 四叉树插入节点
+    // 四叉树插入节点, 递归式插入
+    // 四叉树递归遍历出发,四叉树下碰撞代号
+    /// |2|8
+    /// |1|4
     private void InsertNode(T item, int depth, Vector3 center, Vector3 size)
     {
+        size *= 0.5f;
         float centerX = center.x, centerZ = center.z, sizeX = size.x, sizeZ = size.z;
+        if (depth == curMaxDepth)
+        {
+            uint morton = MortronFromWorldPos(centerX, centerZ);
+            if (!childrenDict.ContainsKey(morton))
+                childrenDict.Add(morton, new QuadLeaf<T>());
+            var node = childrenDict[morton].Insert(item);
+            item.SetLinkedListNode<T>(morton, node);
+        } else
+        {
+            int col = 0;
+            float minX = item.bounds.min.x, maxX = item.bounds.max.x, minZ = item.bounds.min.z, maxZ = item.bounds.max.z;
+            if (centerX >= minX && centerZ >= minZ)
+                col |= 1;
+            if (centerX >= minX && centerZ <= maxZ)
+                col |= 2;
+            if (centerX <= maxX && centerZ >= minZ)
+                col |= 4;
+            if (centerX <= maxX && centerZ <= maxZ)
+                col |= 8;
+
+            if ((col & 1) != 0)
+                InsertNode(item, depth + 1, new Vector3(centerX - sizeX, center.y, centerZ - sizeZ), size);
+            if ((col & 2) != 0)
+                InsertNode(item, depth + 1, new Vector3(centerX - sizeX, center.y, centerZ + sizeZ), size);
+            if ((col & 4) != 0)
+                InsertNode(item, depth + 1, new Vector3(centerX + sizeX, center.y, centerX - sizeZ), size);
+            if ((col & 8) != 0)
+                InsertNode(item, depth + 1, new Vector3(centerX + sizeX, center.y, centerZ + sizeZ), size);
+        }
     }
 
     // 参见 http://taggedwiki.zubiaga.org/new_content/89c18a3d7f533b80eeca890f06517ec7
@@ -190,7 +224,7 @@ public class QuadLeaf<T> where T : ISceneObject, ILinkedListNode
             var node = m_data.Last;
             while (node != null)
             {
-                if (detector.isDectcted(node.Value.bounds))
+                if (detector.isDetected(node.Value.bounds))
                     handler(node.Value);
                 node = node.Next;
             }

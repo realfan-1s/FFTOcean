@@ -42,7 +42,7 @@ Material:
     - _Metallic: 1
     - _Mips: 3.13
     - _Roughness: 0.1
-    - _SubSurfaceStrength: 0.29
+    - _SubSurfaceStrength: 1
     m_Colors:
     - _BubbleColor: {r: 1, g: 1, b: 1, a: 1}
     - _Color: {r: 0.10215378, g: 0, b: 1, a: 1}

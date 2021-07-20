@@ -12,7 +12,7 @@ public enum DetectDir
 public interface IDetector
 {
     Vector3 position { get; }
-    bool isDectcted(Bounds bounds);
+    bool isDetected(Bounds bounds);
 
     /// <summary>
     /// 确定碰撞发生的位置，四叉树下碰撞代号
