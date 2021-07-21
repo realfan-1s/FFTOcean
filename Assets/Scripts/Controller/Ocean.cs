@@ -245,12 +245,12 @@ public class Ocean : MonoBehaviour
         oceanMat.SetTexture("_Normal", normalRT);
         oceanMat.SetTexture("_Bubbles", bubbleRT);
 
-        displaceXMat.SetTexture("_MainTex", displaceXSpectrumRT);
-        heightMat.SetTexture("_MainTex", heightSpectrumRT);
-        displaceZMat.SetTexture("_MainTex", displaceZSpectrumRT);
-        displaceMat.SetTexture("_MainTex", displaceRT);
-        normalMat.SetTexture("_MainTex", normalRT);
-        bubbleMat.SetTexture("_MainTex", bubbleRT);
+        // displaceXMat.SetTexture("_MainTex", displaceXSpectrumRT);
+        // heightMat.SetTexture("_MainTex", heightSpectrumRT);
+        // displaceZMat.SetTexture("_MainTex", displaceZSpectrumRT);
+        // displaceMat.SetTexture("_MainTex", displaceRT);
+        // normalMat.SetTexture("_MainTex", normalRT);
+        // bubbleMat.SetTexture("_MainTex", bubbleRT);
     }
     void FFT(int kernel, ref RenderTexture input)
     {

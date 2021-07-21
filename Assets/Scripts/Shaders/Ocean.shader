@@ -1,10 +1,4 @@
-﻿// Upgrade NOTE: replaced '_LightMatrix0' with 'unity_WorldToLight'
-
-// Upgrade NOTE: replaced '_LightMatrix0' with 'unity_WorldToLight'
-
-// Upgrade NOTE: replaced '_LightMatrix0' with 'unity_WorldToLight'
-
-/*
+﻿/*
     白浪、海浪等纹理采样；
     反射、折射、焦散、菲涅尔反射效果
 */
@@ -25,9 +19,6 @@ Shader "Custom/Ocean"
         [HideInInspector]_Displace ("_Displace", 2D) = "white" {}
         [HideInInspector]_Normal("_Normal", 2D) = "white" {}
         [HideInInspector]_Bubbles("_Bubbles", 2D) = "White" {}
-
-        // TODO:焦散贴图
-        _Caustic("Caustic", 2D) = "White" {}
     }
     SubShader
     {
@@ -63,8 +54,6 @@ Shader "Custom/Ocean"
             sampler2D _Displace;
             sampler2D _Normal;
             sampler2D _Bubbles;
-            sampler2D _Caustic;
-            float4 _Caustic_ST;
             float4 _Displace_ST;
             // float _Gloss;
             // fixed _FresnelRatio;
