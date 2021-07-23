@@ -62,6 +62,7 @@ public class Ocean : MonoBehaviour
     private int[] vertIndexes; // 三角形面索引
     private Vector3[] positions; // 位置索引
     private Vector2[] uvs; // uv坐标信息
+    private MeshCollider meshCollider;
     #endregion
     void Awake()
     {
@@ -75,10 +76,14 @@ public class Ocean : MonoBehaviour
         render = gameObject.GetComponent<MeshRenderer>();
         if (!render)
             render = gameObject.AddComponent<MeshRenderer>();
+        meshCollider = gameObject.GetComponent<MeshCollider>();
+        if (!meshCollider)
+            meshCollider = gameObject.AddComponent<MeshCollider>();
 
         mesh = new Mesh();
         filter.mesh = mesh;
         render.material = oceanMat;
+        meshCollider.sharedMesh = mesh;
     }
     // Start is called before the first frame update
     void Start()

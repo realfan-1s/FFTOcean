@@ -12,8 +12,8 @@ Shader "Custom/Ocean"
         _SpecularColor("SpecularColor", Color) = (1, 1, 1, 1)
         /* phong shading光照参数
         _Gloss ("Gloss", Range(8,256)) = 20
-        _FresnelRatio("FresnelRatio", Range(0, 1)) = 0.5
         */
+        _Metalness("Metalness", Range(0, 1)) = 0.5
         _Roughness("roughness", Range(0, 1)) = 0.5
         _SubSurfaceStrength("SubSurfaceStrength", Range(0, 1)) = 0.1
         [HideInInspector]_Displace ("_Displace", 2D) = "white" {}
@@ -56,7 +56,7 @@ Shader "Custom/Ocean"
             sampler2D _Bubbles;
             float4 _Displace_ST;
             // float _Gloss;
-            // fixed _FresnelRatio;
+            fixed _Metalness;
             fixed _Roughness;
             fixed _SubSurfaceStrength;
 
@@ -146,7 +146,7 @@ Shader "Custom/Ocean"
                 fixed r2 = _Roughness * _Roughness;
                 half V = GGXVisibilityTerm(r2 , ndotv, ndotl);
                 half D = GGXTerm(r2, ndoth);
-                half3 F = FresnelSchlick(envMap, ldoth);
+                half3 F = FresnelSchlick(_SpecularColor, ldoth);
                 half3 specualr = V * D * F;
                 half mips = _Roughness * (1.7 - 0.7 * _Roughness) * 6;
                 // 通过掠射角得到更加真实的菲涅尔反射效果，同时考虑了材质粗糙度的影响
