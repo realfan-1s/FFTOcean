@@ -16,6 +16,7 @@ Shader "Custom/Ocean"
         _Metalness("Metalness", Range(0, 1)) = 0.5
         _Roughness("roughness", Range(0, 1)) = 0.5
         _SubSurfaceStrength("SubSurfaceStrength", Range(0, 1)) = 0.1
+        _SubSurfaceScale("Subsurface Scale", Range(0.1, 5)) = 2.28
         [HideInInspector]_Displace ("_Displace", 2D) = "white" {}
         [HideInInspector]_Normal("_Normal", 2D) = "white" {}
         [HideInInspector]_Bubbles("_Bubbles", 2D) = "White" {}
@@ -59,6 +60,7 @@ Shader "Custom/Ocean"
             fixed _Metalness;
             fixed _Roughness;
             fixed _SubSurfaceStrength;
+            float _SubSurfaceScale;
 
             // F(V, H) = F0 + (1 - F0) * pow(1 - (l * h)), 5)
             inline half3 FresnelSchlick(half3 col, half ldoth){
@@ -93,9 +95,8 @@ Shader "Custom/Ocean"
                 return 0.5 / (lambdaL + lambdaV + 1e-5f);
             }
 
-            inline half SchlickPhaseFunc(half ldotv, half ndotv, fixed rough){
-                half theta = 4 * pow(1 + rough * cos(ldotv), 2);
-                return ndotv * UNITY_INV_PI * (1 - rough) * (1 + rough) / theta;
+            inline half SchlickPhaseFunc(fixed3 lightDir, fixed3 normalDir, fixed3 viewDir, fixed roughness, float scale){
+                return saturate(pow(dot(viewDir, -(lightDir + 0.522 * normalDir)), scale)) * roughness;
             }
 
             v2f vert(input v){
@@ -121,7 +122,6 @@ Shader "Custom/Ocean"
                 fixed3 viewDir = normalize(UnityWorldSpaceViewDir(o.worldPos));
                 fixed3 reflectDir = reflect(-viewDir, normalDir);
                 fixed3 halfDir = normalize(viewDir + lightDir);
-                half oneMinusReflective = 1 - max(max(_SpecularColor.r, _SpecularColor.g), _SpecularColor.b);
 
                 // 计算之后公式所需的所有点乘项
                 half ldoth = saturate(dot(lightDir, halfDir));
@@ -135,26 +135,30 @@ Shader "Custom/Ocean"
                 half3 envMap = DecodeHDR(rgbm, unity_SpecCube0_HDR);
                 fixed3 oceanColor = lerp(_ShallowColor, _DeepColor, ndotl);
                 fixed3 bubbleColor =  _LightColor0.rgb * _BubbleColor.rgb * saturate(ndotl);
+                fixed3 albedo = lerp(oceanColor, bubbleColor, bubbles);
+                half oneMinusReflective = 1 - max(max(albedo.r, albedo.g), albedo.b);
 
                 // 暂时先用phong shading凑活一下
                 // fixed fresnel = FresnelSchlick(ldoth);
                 // fixed3 specualr = _LightColor0.rgb * _SpecularColor.rgb * pow(saturate(max(0, ndoth)), _Gloss);
                 // fixed3 diffuse = lerp(oceanColor, bubbleColor, bubbles);
                 // fixed3 col = UNITY_LIGHTMODEL_AMBIENT.rgb + specualr + lerp(diffuse, sky, fresnel);
-                fixed3 diffColor = lerp(oceanColor, bubbleColor, bubbles) * oneMinusReflective;
-                fixed3 diffuse = DisneyDiffuse(diffColor, _Roughness, ldoth, ndotl, ndotv);
                 fixed r2 = _Roughness * _Roughness;
                 half V = GGXVisibilityTerm(r2 , ndotv, ndotl);
                 half D = GGXTerm(r2, ndoth);
-                half3 F = FresnelSchlick(_SpecularColor, ldoth);
+                half3 F0 = lerp(half3(0.4, 0.4, 0.4), _SpecularColor * albedo, _Metalness);
+                half3 F = FresnelSchlick(F0, ldoth);
                 half3 specualr = V * D * F;
+
+                fixed3 diffColor = albedo * oneMinusReflective;
+                fixed3 diffuse = DisneyDiffuse(diffColor, _Roughness, ldoth, ndotl, ndotv);
                 half mips = _Roughness * (1.7 - 0.7 * _Roughness) * 6;
                 // 通过掠射角得到更加真实的菲涅尔反射效果，同时考虑了材质粗糙度的影响
                 half grazingTerm = saturate(2 - _Roughness - oneMinusReflective);
                 half surfaceReduction = 1.0 / (r2 + 1.0);
-                half3 indirectiveSpceular = surfaceReduction * envMap.rgb * FresnelLerp(_SpecularColor, grazingTerm, ndotv);
-                // TODO:水体次表面散射
-                half3 SubSurfaceScatter = envMap.rgb * SchlickPhaseFunc(ldotv, ndotv, _SubSurfaceStrength);
+                half3 indirectiveSpceular = surfaceReduction * envMap.rgb * FresnelLerp(F0, grazingTerm, ndotv);
+                // 水体次表面散射, 参考https://www.alanzucconi.com/2017/08/30/fast-subsurface-scattering-1/
+                half3 SubSurfaceScatter = envMap.rgb * SchlickPhaseFunc(lightDir, normalDir, viewDir, _SubSurfaceStrength, _SubSurfaceScale);
 
                 half3 col = UNITY_LIGHTMODEL_AMBIENT.rgb + UNITY_PI * (specualr + diffuse) * ndotl + indirectiveSpceular + SubSurfaceScatter;
                 return half4(col, 1);

@@ -1,0 +1,23 @@
+﻿#pragma kernel TraverseQuadTree
+
+#include "Struct.compute"
+
+// 参见https://github.com/wlgys8/GPUDrivenTerrainLearn
+uniform uint curLOD;
+// uint2表示Node的二位索引
+ConsumeStructuredBuffer<uint2> consumeNodeList;
+AppendStructuredBuffer<uint2> appendNodeList;
+// z表示LOD等级
+AppendStructuredBuffer<uint3> appendFinalNodeList;
+
+/*
+1. 将当前PassLOD设为5
+2. 执行Dispatch
+3. 从ConsumeNodeList中获取节点，对节点进行评价，决定是否分割。
+4. 如果决定分割，那么将分割后的4个节点加入AppendNodeList,否则将当前节点加入AppendFinalNodeList
+5. Dispatch结束, 将当前PassLOD减1，互换ConsumeNodeList和AppendNodeList，回到2执行下一个Pass
+*/
+[numthreads(8, 8, 1)]
+void TraverseQuadTree(uint3 id : SV_DispatchThreadID){
+
+}

@@ -66,11 +66,11 @@ Material:
     m_Floats:
     - _AlphaScale: 1
     - _BumpScale: 1
-    - _CausticsRatio: 0.4
+    - _CausticsRatio: 1
     - _Cutoff: 0.5
     - _DetailNormalMapScale: 1
     - _DstBlend: 0
-    - _Gloss: 256
+    - _Gloss: 20
     - _GlossMapScale: 1
     - _Glossiness: 0.5
     - _GlossyReflections: 1

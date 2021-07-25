@@ -17,12 +17,12 @@ public class DontMoveObj : ISceneObject
     [SerializeField]
     private Vector3 _size;
     private GameObject prefab;
-    public DontMoveObj(Bounds bound, Vector3 pos, Vector3 rotation, Vector3 size, string path)
+    public DontMoveObj(Bounds bound, Vector3 pos, Vector3 rotation, float sizeX = 1, float sizeY = 1, float sizeZ = 1, string path = "Asset/Prefabs")
     {
         _bounds = bound;
         _path = path;
         _pos = pos;
-        _size = size;
+        _size = new Vector3(sizeX,  sizeY, sizeZ);
         _rotation = rotation;
     }
     public void Load(Transform parent)

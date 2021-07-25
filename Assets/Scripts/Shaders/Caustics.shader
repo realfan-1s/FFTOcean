@@ -7,7 +7,6 @@
         _Specular("Specular", Color) = (1, 1, 1, 1)
         _NormalScale("Normal Scale", Range(0, 1)) = 0.5
         _CausticsRatio("Caustics Ratio", Range(0, 1)) = 0.5
-        _AlphaScale("Alpha Scale", Range(0, 1)) = 0.5
         _Gloss("Gloss", Range(8.0, 256)) = 20
     }
     SubShader
@@ -37,7 +36,6 @@
             sampler2D _Normal;
             float4 _Normal_ST;
             fixed _CausticsRatio;
-            fixed _AlphaScale;
             fixed _NormalScale;
             fixed4 _Specular;
             float _Gloss;
@@ -48,7 +46,7 @@
                 o.screenPos = ComputeScreenPos(o.pos);
                 o.uv.xy = i.texcoord.xy * _MainTex_ST.xy + _MainTex_ST.zw;
                 o.uv.zw = i.texcoord.xy * _Normal_ST.xy + _Normal_ST.zw;
-                
+
                 float3 binormal = cross(i.normal, i.tangent.xyz) * i.tangent.w;
                 float3x3 rotation = float3x3(i.tangent.xyz, binormal, i.normal);
                 o.lightDir = normalize(mul(rotation, ObjSpaceLightDir(i.vertex))).xyz;
@@ -57,7 +55,7 @@
             }
 
             inline float4 mainImage (float2 p){
-                float3x3 mat = float3x3(-2, -1, 2, 
+                float3x3 mat = float3x3(-2, -1, 2,
                                         3, -2, 1,
                                         1, 2, 2);
                 float4 k = float4(0, 0, 0, _Time.y) * 0.5;
@@ -65,7 +63,7 @@
                 float f1 = length(0.5 - frac(k.xyw = mul(k.xyw, transpose(0.5 * mat))));
                 float f2 = length(0.5 - frac(k.xyw = mul(k.xyw, transpose(0.4 * mat))));
                 float f3 = length(0.5 - frac(k.xyw = mul(k.xyw, transpose(0.3 * mat))));
-                k = pow(min(min(f1, f2), f3), 7.0) * 25.0 + float4(0, 2, 3, 1) / 6;
+                k = pow(min(min(f1, f2), f3), 7.0) * 25.0;
                 return k * _CausticsRatio;
             }
 
