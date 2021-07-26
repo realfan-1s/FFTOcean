@@ -1,8 +1,13 @@
-﻿// 设置最大的LOD深度,0-5层
+﻿#ifndef STRUCT_TERRAIN
+#define STRUCT_TERRAIN
+
+// 设置最大的LOD深度,0-5层
 #define MAX_LOD_DEPTH 5
 #define MAX_NODE_NUM 34124
 
-// 存储节点的材质索引和LOD级别
+// 是否是叶子结点
 struct NodeDescription{
-    uint wight;
+    bool isLeaf;
 };
+
+#endif

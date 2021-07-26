@@ -1,23 +1,102 @@
 ﻿#pragma kernel TraverseQuadTree
+#pragma kernel CreateLodMap
 
 #include "Struct.compute"
 
+/*
+    生成二叉树
+*/
+RWTexture2D<float4> QuadTreeMap;
+int nodeOffset;
+uint mapSize;
+
 // 参见https://github.com/wlgys8/GPUDrivenTerrainLearn
 uniform uint curLOD;
-// uint2表示Node的二位索引
+// 当前LOD下Node的二维索引
 ConsumeStructuredBuffer<uint2> consumeNodeList;
 AppendStructuredBuffer<uint2> appendNodeList;
 // z表示LOD等级
 AppendStructuredBuffer<uint3> appendFinalNodeList;
+// 保存节点关键信息
+RWStructuredBuffer<NodeDescription> nodeInfos;
+RWTexture2D<float4> lodMap;
+RWTexture2D<float4> heightMap;
+
 
 /*
+记录每个LOD级别的(nodeSize, patchExtent, nodeCount)
+其中:
+- nodeSize为Node的边长(米)
+- nodeCount等于WorldSize/nodeSize
+- patchExtent等于nodeSize/16
+- sectorCountPerNode等于2^lod
+TODO: patchExtent和SectorCountPerNode的作用是什么？
+*/
+uniform float2 worldLodParams[6];
+uniform uint offsetOfNodeID[6];
+
+uint GetNodeID(uint2 nodeLodCount, uint lodLevel);
+float GetNodeSize(uint lodLevel);
+float GetnodeCount(uint lodLevel);
+// float GetPatchExtent(uint lodLevel);
+bool EvaluateNode(uint2 nodeLodCount, uint lodLevel);
+
+/*
+遍历二叉树
 1. 将当前PassLOD设为5
 2. 执行Dispatch
 3. 从ConsumeNodeList中获取节点，对节点进行评价，决定是否分割。
 4. 如果决定分割，那么将分割后的4个节点加入AppendNodeList,否则将当前节点加入AppendFinalNodeList
 5. Dispatch结束, 将当前PassLOD减1，互换ConsumeNodeList和AppendNodeList，回到2执行下一个Pass
 */
-[numthreads(8, 8, 1)]
+[numthreads(1, 1, 1)]
 void TraverseQuadTree(uint3 id : SV_DispatchThreadID){
+    uint2 nodeLodCount = consumeNodeList.Consume();
+    uint nodeID = GetNodeID(nodeLodCount, curLOD);
+    NodeDescription nodeDesc = nodeInfos[nodeID];
+    if (curLOD > 0 && EvaluateNode(nodeLodCount, curLOD)){
+        // 划分四叉树, 将原先的一个节点进一步拆分成四个
+        appendNodeList.Append(nodeLodCount * 2 + uint2(0, 0));
+        appendNodeList.Append(nodeLodCount * 2 + uint2(1, 0));
+        appendNodeList.Append(nodeLodCount * 2 + uint2(0, 1));
+        appendNodeList.Append(nodeLodCount * 2 + uint2(1, 1));
+        nodeDesc.isLeaf = true;
+    } else {
+        // 不划分四叉树，直接加入到最终节点中
+        appendFinalNodeList.Append(uint3(nodeLodCount, curLOD));
+        nodeDesc.isLeaf = false;
+    }
+    nodeInfos[nodeID] = nodeDesc;
+}
 
+/*
+LOD MAP部分，评价公式为f = d / (n * c)
+其中d为摄像机到节点中心距离，n为节点边长，c为用户控制系数。
+当f < 1时，则对节点进行分割。易知，c越大，节点越容易被分割。
+*/
+[numthreads(8, 8, 1)]
+void CreateLodMap(uint3 id : SV_DispatchThreadID){
+    uint2 sector = id.xy;
+    [unroll(10)]
+    for (uint lod = MAX_LOD_DEPTH;lod >= 0; lod--){
+
+    }
+    lodMap[sector] = 0;
+}
+
+uint GetNodeID(uint2 nodeLodCount, uint mipLevel){
+    return GetnodeCount(mipLevel) * nodeLodCount.y + nodeLodCount.x + offsetOfNodeID[mipLevel];
+}
+
+float GetNodeSize(uint lodLevel){
+    return worldLodParams[lodLevel].x;
+}
+
+float GetnodeCount(uint lodLevel){
+    return worldLodParams[lodLevel].y;
+}
+
+// 评估节点划分的依据式相机的距离
+bool EvaluateNode(uint2 nodeLodCount, uint lodLevel){
+    return true;
 }
