@@ -38,7 +38,7 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 705507994}
-  m_IndirectSpecularColor: {r: 0.70043206, g: 0.7788845, b: 0.76724935, a: 1}
+  m_IndirectSpecularColor: {r: 0.70184445, g: 0.780185, b: 0.7678746, a: 1}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -376,7 +376,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &1090495584
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -439,6 +439,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1286073893}
   - component: {fileID: 1286073892}
+  - component: {fileID: 1286073894}
   m_Layer: 0
   m_Name: Ocean
   m_TagString: Untagged
@@ -473,12 +474,6 @@ MonoBehaviour:
   horizontalOrVertical: 1
   oceanShader: {fileID: 7200000, guid: e63c377f5e9ce044f816bd3896132f6d, type: 3}
   oceanMat: {fileID: 2100000, guid: 723b24f21a26587489aec0181b957437, type: 2}
-  displaceXMat: {fileID: 2100000, guid: 572449112b4550744b1e01f4b22de2e1, type: 2}
-  heightMat: {fileID: 2100000, guid: 7f774be8fa2a06d4196f505f339bc746, type: 2}
-  displaceZMat: {fileID: 2100000, guid: 1ee8b7d6f7dc0604c94bb4f0a36f3273, type: 2}
-  displaceMat: {fileID: 2100000, guid: a66c6532cb74c4b4abfa1c6feb04389b, type: 2}
-  normalMat: {fileID: 2100000, guid: 20ad9c8a25bbd8c4a8f7cbb07878df74, type: 2}
-  bubbleMat: {fileID: 2100000, guid: c12ed5c1bb1467b4295a2c783850335e, type: 2}
 --- !u!4 &1286073893
 Transform:
   m_ObjectHideFlags: 0
@@ -494,6 +489,20 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 1
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1286073894
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1286073891}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a1bcf62f7e3924849a3042197260aad7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  terrianLod: {fileID: 7200000, guid: 0bbcb0da00a1de34aafe233048b7536a, type: 3}
+  heightMipMap: {fileID: 7200000, guid: d73fca5ed775f9b40baed9ca76ade71d, type: 3}
 --- !u!1 &1490815125
 GameObject:
   m_ObjectHideFlags: 0

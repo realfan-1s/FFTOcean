@@ -47,12 +47,12 @@ public class Ocean : MonoBehaviour
     [Header("海洋材质")]
     #region
     public Material oceanMat;
-    public Material displaceXMat;
-    public Material heightMat;
-    public Material displaceZMat;
-    public Material displaceMat;
-    public Material normalMat;
-    public Material bubbleMat;
+    // public Material displaceXMat;
+    // public Material heightMat;
+    // public Material displaceZMat;
+    // public Material displaceMat;
+    // public Material normalMat;
+    // public Material bubbleMat;
     #endregion
     #region 
     [Header("Mesh相关参数")]
@@ -84,10 +84,6 @@ public class Ocean : MonoBehaviour
         filter.mesh = mesh;
         render.material = oceanMat;
         meshCollider.sharedMesh = mesh;
-    }
-    // Start is called before the first frame update
-    void Start()
-    {
         GenerateMesh();
         InitOceanValue();
     }
@@ -299,5 +295,13 @@ public class Ocean : MonoBehaviour
         mesh.vertices = positions;
         mesh.SetIndices(vertIndexes, MeshTopology.Triangles, 0);
         mesh.uv = uvs;
+    }
+    public RenderTexture GetDisplaceRT()
+    {
+        return displaceRT;
+    }
+    public RenderTexture GetNormalRT()
+    {
+        return normalRT;
     }
 }

@@ -1,0 +1,19 @@
+﻿// #pragma kernel HeightMipMap
+#pragma kernel PatchMinMaxHeight
+
+Texture2D<float4> displaceRT;
+RWTexture2D<float4> minMaxHeightRT;
+
+[numthreads(8, 8, 1)]
+void PatchMinMaxHeight(uint3 id : SV_DISPATCHTHREADID){
+    float h1 = displaceRT[id.xy].y;
+    float h2 = displaceRT[id.xy + uint2(1, 0)].y;
+    float h3 = displaceRT[id.xy + uint2(0, 1)].y;
+    float h4 = displaceRT[id.xy + uint2(1, 1)].y;
+    float minHeight = min(min(h1, h2), min(h3, h4));
+    float maxHeight = max(max(h1, h2), max(h3, h4));
+    minMaxHeightRT[id.xy] = float4(minHeight, maxHeight, 0, 1);
+}
+
+// [numthreads(8, 8, 1)]
+// void HeightMipMap(uint3 id : SV_DISPATCHTHREADID){}

@@ -1,17 +1,12 @@
 ﻿#pragma kernel TraverseQuadTree
 #pragma kernel CreateLodMap
+#pragma kernel CreatePathes
 
 #include "Struct.compute"
 
-/*
-    生成二叉树
-*/
-RWTexture2D<float4> QuadTreeMap;
+// 参见https://github.com/wlgys8/GPUDrivenTerrainLearn, 只实现视锥裁剪Frustum Cull
 int nodeOffset;
 uint mapSize;
-
-// 参见https://github.com/wlgys8/GPUDrivenTerrainLearn
-uniform uint curLOD;
 // 当前LOD下Node的二维索引
 ConsumeStructuredBuffer<uint2> consumeNodeList;
 AppendStructuredBuffer<uint2> appendNodeList;
@@ -20,9 +15,18 @@ AppendStructuredBuffer<uint3> appendFinalNodeList;
 // 保存节点关键信息
 RWStructuredBuffer<NodeDescription> nodeInfos;
 RWTexture2D<float4> lodMap;
-RWTexture2D<float4> heightMap;
+RWTexture2D<float4> QuadTreeMapRT;
+Texture2D<float4> heightMap;
+Texture2D<float4> minMaxHeightMap;
+// 存放最终的叶子节点数据,xy存储二维索引，z存储lodLevel
+RWStructuredBuffer<uint3> finalNodeList;
 
-
+uniform uint curLOD;
+uniform float3 cameraPos;
+// 世界大小
+uniform float3 worldSize;
+// 用户可控制系数
+uniform float controllerC;
 /*
 记录每个LOD级别的(nodeSize, patchExtent, nodeCount)
 其中:
@@ -40,6 +44,12 @@ float GetNodeSize(uint lodLevel);
 float GetnodeCount(uint lodLevel);
 // float GetPatchExtent(uint lodLevel);
 bool EvaluateNode(uint2 nodeLodCount, uint lodLevel);
+float2 NodeCenterPos(uint2 nodeLodCount, uint lodLevel);
+float3 GetNodeCenterPos(uint2 nodeLodCount, uint lodLevel);
+RenderPatch GeneratePatch(uint3 nodeLodCount, uint2 offset);
+bool IsOutSidePlane(float4 plane, float3 pos);
+bool IsAABBOutOfPlane(float4 plane, float3 boundMin, float boundMax);
+bool FrustCull(float4 plane[6], Bounds bound); 
 
 /*
 遍历二叉树
@@ -69,21 +79,35 @@ void TraverseQuadTree(uint3 id : SV_DispatchThreadID){
     nodeInfos[nodeID] = nodeDesc;
 }
 
-/*
-LOD MAP部分，评价公式为f = d / (n * c)
-其中d为摄像机到节点中心距离，n为节点边长，c为用户控制系数。
-当f < 1时，则对节点进行分割。易知，c越大，节点越容易被分割。
-*/
+// TODO: 生成lod map,弥补接缝处空隙,缝隙难被观察到，但会影响后续的遮挡剔除
 [numthreads(8, 8, 1)]
 void CreateLodMap(uint3 id : SV_DispatchThreadID){
     uint2 sector = id.xy;
     [unroll(10)]
     for (uint lod = MAX_LOD_DEPTH;lod >= 0; lod--){
-
+        
     }
     lodMap[sector] = 0;
 }
 
+/*
+每一个线程对应一个patch，8*8个patches对应一个Node
+SV_DISPATCHTHREADID:线程在整个分发的线程组中的id
+SV_GROUPID:线程组在整个分发线程组中的唯一id
+SV_GROUPTHREADID:线程在线程组中的id
+SV_GROUPINDEX：线程在本线程组中的索引
+*/
+[numthreads(8, 8, 1)]
+void CreatePathes(uint3 id : SV_DISPATCHTHREADID, uint3 groupId : SV_GROUPID, uint3 groupThreadId : SV_GROUPTHREADID){
+    uint3 nodeLodCount = finalNodeList[groupId.x];
+    uint2 patchOffset = groupThreadId.xy;
+    // 生成patch
+    RenderPatch patch = GeneratePatch(nodeLodCount, patchOffset);
+
+    // TODO: 在创建之后将相机不可见的部分剔除渲染
+} 
+
+// 在GPU中替代unordered_map，建立一个uint3->uint的映射，将uint作为下标数组索引NodeDescriptBuffer
 uint GetNodeID(uint2 nodeLodCount, uint mipLevel){
     return GetnodeCount(mipLevel) * nodeLodCount.y + nodeLodCount.x + offsetOfNodeID[mipLevel];
 }
@@ -96,7 +120,72 @@ float GetnodeCount(uint lodLevel){
     return worldLodParams[lodLevel].y;
 }
 
-// 评估节点划分的依据式相机的距离
+float2 GetNodeCenterPos2(uint2 nodeLodCount, uint lodLevel){
+    float nodeSize = GetNodeSize(lodLevel);
+    float nodeCount = GetnodeCount(lodLevel);
+    return ((float2)nodeLodCount - (nodeCount - 1) * 0.5) * nodeSize;
+}
+
+float3 GetNodeCenterPos(uint2 nodeLodCount, uint lodLevel){
+    float2 temp = GetNodeCenterPos2(nodeLodCount, lodLevel);
+    float2 minMaxHeight = minMaxHeightMap.mips[lodLevel + 3][nodeLodCount].xy;
+    float height = (minMaxHeight.x + minMaxHeight.y) * 0.5f * worldSize.y;
+    return float3(temp.x, height, temp.y);
+}
+
+/*
+评价公式为f = d / (n * c)
+其中d为摄像机到节点中心距离，n为节点边长，c为用户控制系数。
+当f < 1时，则对节点进行分割。易知，c越大，节点越容易被分割。
+*/
 bool EvaluateNode(uint2 nodeLodCount, uint lodLevel){
-    return true;
+    float cameraDist = distance(cameraPos, GetNodeCenterPos(nodeLodCount, lodLevel));
+    float f = cameraDist / (GetNodeSize(lodLevel) * controllerC);
+    if (f < 1)
+        return true;
+    return false;
+}
+
+RenderPatch GeneratePatch(uint3 nodeLodCount, uint2 offset){
+    uint lod = nodeLodCount.z;
+    float nodeSize = GetNodeSize(lod);
+    float patchSize = nodeSize / NODE_DIVIDE_PATCHES;
+    float2 nodeCenterPos = GetNodeCenterPos2(nodeLodCount.xy, lod);
+
+    uint2 patchLodCount = nodeLodCount.xy * NODE_DIVIDE_PATCHES + offset;
+    float2 minMaxHeight = minMaxHeightMap.mips[lod][patchLodCount].rg * worldSize.y;
+    RenderPatch patch;
+    patch.worldPos = nodeCenterPos + patchSize * (offset + (NODE_DIVIDE_PATCHES - 1) * 0.5);
+    patch.minMaxHeight = minMaxHeight;
+    patch.lodLevel = lod;
+    return patch;
+}
+
+/*
+https://www.gdcvault.com/play/1025480/Terrain-Rendering-in-Far-Cry
+Far Cry5中有三种剔除，包括视锥体剔除、遮挡剔除、背面剔除
+测试是否在平面外侧,gpu中只能用float4结构，用Ax + By + Cz + D = 0表示一个平面，
+则(A, B, C)表示该平面的法线，D表示原点到平面的距离
+*/
+bool IsOutSidePlane(float4 plane, float3 pos){
+    return (dot(plane.xyz, pos) + plane.w) < 0;
+}
+// 只要存在一个平面，使得整个平面的八个顶点都在平面的外侧，整个物体就在平面之外
+bool IsAABBOutOfPlane(float4 plane, float3 minPos, float3 maxPos){
+    return IsOutSidePlane(plane, minPos) &&
+    IsOutSidePlane(plane, maxPos) &&
+    IsOutSidePlane(plane, float3(minPos.xy, maxPos.z)) &&
+    IsOutSidePlane(plane, float3(maxPos.x, minPos.yz)) &&
+    IsOutSidePlane(plane, float3(maxPos.x, minPos.y, maxPos.z)) &&
+    IsOutSidePlane(plane, float3(minPos.x, maxPos.yz)) &&
+    IsOutSidePlane(plane, float3(maxPos.xy, minPos.z)) &&
+    IsOutSidePlane(plane, float3(minPos.x, maxPos.y, minPos.z));
+}
+bool FrustCull(float4 plane[6], Bounds bound){
+    return IsAABBOutOfPlane(plane[0], bound.minPos, bound.maxPos) ||
+    IsAABBOutOfPlane(plane[1], bound.minPos, bound.maxPos) ||
+    IsAABBOutOfPlane(plane[2], bound.minPos, bound.maxPos) ||
+    IsAABBOutOfPlane(plane[3], bound.minPos, bound.maxPos) ||
+    IsAABBOutOfPlane(plane[4], bound.minPos, bound.maxPos) ||
+    IsAABBOutOfPlane(plane[5], bound.minPos, bound.maxPos);
 }

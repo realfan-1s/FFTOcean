@@ -101,6 +101,7 @@ Shader "Custom/Ocean"
 
             v2f vert(input v){
                 v2f o;
+                // TODO: 渲染过程中添加RenderPatch
                 // 采样位移贴图
                 o.uv = TRANSFORM_TEX(v.uv, _Displace);
                 float4 displace = tex2Dlod(_Displace, float4(o.uv, 0, 0));

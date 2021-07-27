@@ -27,7 +27,6 @@ public class SceneObject : ISceneObject, ILinkedListNode, IComparable<SceneObjec
     private ISceneObject _sceneObj;
     public CreateFlag createFlag;
     public LoadFlag loadFlag;
-    // TODO: 有装箱拆箱的消耗
     private Dictionary<uint, object> childDict;
     public SceneObject(ISceneObject obj)
     {
