@@ -32,16 +32,17 @@ uniform float controllerC;
 其中:
 - nodeSize为Node的边长(米)
 - nodeCount等于WorldSize/nodeSize
-- patchExtent等于nodeSize/16
-- sectorCountPerNode等于2^lod
-TODO: patchExtent和SectorCountPerNode的作用是什么？
+- patchExtent等于nodeSize/16,拥挤计算包围盒的半高宽
 */
-uniform float2 worldLodParams[6];
+uniform float3 worldLodParams[6];
 uniform uint offsetOfNodeID[6];
+/* 裁剪相关变量 */
+uniform float4 _CameraFrustumPlanes[6];
+AppendStructuredBuffer<RenderPatch> CulledPatchList;
 
 uint GetNodeID(uint2 nodeLodCount, uint lodLevel);
 float GetNodeSize(uint lodLevel);
-float GetnodeCount(uint lodLevel);
+float GetNodeCount(uint lodLevel);
 // float GetPatchExtent(uint lodLevel);
 bool EvaluateNode(uint2 nodeLodCount, uint lodLevel);
 float2 NodeCenterPos(uint2 nodeLodCount, uint lodLevel);
@@ -50,6 +51,7 @@ RenderPatch GeneratePatch(uint3 nodeLodCount, uint2 offset);
 bool IsOutSidePlane(float4 plane, float3 pos);
 bool IsAABBOutOfPlane(float4 plane, float3 boundMin, float boundMax);
 bool FrustCull(float4 plane[6], Bounds bound); 
+Bounds GetPatchBounds(RenderPatch patch);
 
 /*
 遍历二叉树
@@ -105,24 +107,32 @@ void CreatePathes(uint3 id : SV_DISPATCHTHREADID, uint3 groupId : SV_GROUPID, ui
     RenderPatch patch = GeneratePatch(nodeLodCount, patchOffset);
 
     // TODO: 在创建之后将相机不可见的部分剔除渲染
+    Bounds bound = GetPatchBounds(patch);
+    if (FrustCull(_CameraFrustumPlanes, bound))
+        return;
+    CulledPatchList.Append(patch);
 } 
 
 // 在GPU中替代unordered_map，建立一个uint3->uint的映射，将uint作为下标数组索引NodeDescriptBuffer
-uint GetNodeID(uint2 nodeLodCount, uint mipLevel){
-    return GetnodeCount(mipLevel) * nodeLodCount.y + nodeLodCount.x + offsetOfNodeID[mipLevel];
+uint GetNodeID(uint2 nodeLodCount, uint lodLevel){
+    return GetNodeCount(lodLevel) * nodeLodCount.y + nodeLodCount.x + offsetOfNodeID[lodLevel];
 }
 
 float GetNodeSize(uint lodLevel){
     return worldLodParams[lodLevel].x;
 }
 
-float GetnodeCount(uint lodLevel){
+float GetNodeCount(uint lodLevel){
     return worldLodParams[lodLevel].y;
+}
+
+float GetNodeExtent(uint lodLevel){
+    return worldLodParams[lodLevel].z;
 }
 
 float2 GetNodeCenterPos2(uint2 nodeLodCount, uint lodLevel){
     float nodeSize = GetNodeSize(lodLevel);
-    float nodeCount = GetnodeCount(lodLevel);
+    float nodeCount = GetNodeCount(lodLevel);
     return ((float2)nodeLodCount - (nodeCount - 1) * 0.5) * nodeSize;
 }
 
@@ -188,4 +198,16 @@ bool FrustCull(float4 plane[6], Bounds bound){
     IsAABBOutOfPlane(plane[3], bound.minPos, bound.maxPos) ||
     IsAABBOutOfPlane(plane[4], bound.minPos, bound.maxPos) ||
     IsAABBOutOfPlane(plane[5], bound.minPos, bound.maxPos);
+}
+Bounds GetPatchBounds(RenderPatch patch){
+    float extent = GetNodeExtent(patch.lodLevel);
+    Bounds bound;
+    float3 boundMin, boundMax;
+    boundMin.y = patch.minMaxHeight.x;
+    boundMax.y = patch.minMaxHeight.y;
+    boundMin.xz = patch.worldPos - float2(extent, extent);
+    boundMax.xz = patch.worldPos + float2(extent, extent);
+    bound.minPos = boundMin;
+    bound.maxPos = boundMax;
+    return bound;
 }

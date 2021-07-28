@@ -87,12 +87,18 @@ public class Ocean : MonoBehaviour
         GenerateMesh();
         InitOceanValue();
     }
-
+    private void Start()
+    {
+        // Test
+        MinMaxTextureMgr.instance.Generate(heightSpectrumRT, (int)Mathf.Pow(2, fftRatio));
+    }
     // Update is called once per frame
     void Update()
     {
         time += Time.deltaTime * timeScale;
         ComputeOceanValues();
+        // Test
+        MinMaxTextureMgr.instance.RefreshInfos();
     }
 
     /// <summary>

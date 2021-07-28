@@ -1,0 +1,24 @@
+Base path: 'C:/Program Files/Unity/Hub/Editor/2019.4.23f1c1/Editor/Data', plugins path 'C:/Program Files/Unity/Hub/Editor/2019.4.23f1c1/Editor/Data/PlaybackEngines'
+Cmd: initializeCompiler
+Cmd: compileComputeKernel
+  error: 2 plat 4 at LoadQuadTree.compute(118): undeclared identifier 'GetnodeCount'
+  api=4 insize=8526 outsize=0 ok=0
+Cmd: compileComputeKernel
+  error: 2 plat 4 at LoadQuadTree.compute(211): undeclared identifier 'maxPos'
+  api=4 insize=8525 outsize=0 ok=0
+Cmd: compileComputeKernel
+  api=4 insize=8525 outsize=7107 ok=1
+Cmd: compileSnippet
+  error: 2 plat 4 at (71): array, matrix, vector, or indexable object type expected in index expression\nCompiling Fragment program with UNITY_PASS_FORWARDBASE DIRECTIONAL
+Platform defines: UNITY_ENABLE_REFLECTION_BUFFERS UNITY_USE_DITHER_MASK_FOR_ALPHABLENDED_SHADOWS UNITY_PBS_USE_BRDF1 UNITY_SPECCUBE_BOX_PROJECTION UNITY_SPECCUBE_BLENDING UNITY_ENABLE_DETAIL_NORMALMAP SHADER_API_DESKTOP UNITY_COLORSPACE_GAMMA UNITY_LIGHT_PROBE_PROXY_VOLUME UNITY_LIGHTMAP_FULL_HDR
+  api=4 type=1 insize=8001 outsize=0 kw=UNITY_PASS_FORWARDBASE DIRECTIONAL pd=UNITY_ENABLE_REFLECTION_BUFFERS UNITY_USE_DITHER_MASK_FOR_ALPHABLENDED_SHADOWS UNITY_PBS_USE_BRDF1 UNITY_SPECCUBE_BOX_PROJECTION UNITY_SPECCUBE_BLENDING UNITY_ENABLE_DETAIL_NORMALMAP SHADER_API_DESKTOP UNITY_COLORSPACE_GAMMA UNITY_LIGHT_PROBE_PROXY_VOLUME UNITY_LIGHTMAP_FULL_HDR ok=0
+Cmd: compileSnippet
+  error: 2 plat 4 at (71): array, matrix, vector, or indexable object type expected in index expression\nCompiling Fragment program with UNITY_PASS_FORWARDBASE DIRECTIONAL
+Platform defines: UNITY_ENABLE_REFLECTION_BUFFERS UNITY_USE_DITHER_MASK_FOR_ALPHABLENDED_SHADOWS UNITY_PBS_USE_BRDF1 UNITY_SPECCUBE_BOX_PROJECTION UNITY_SPECCUBE_BLENDING UNITY_ENABLE_DETAIL_NORMALMAP SHADER_API_DESKTOP UNITY_COLORSPACE_GAMMA UNITY_LIGHT_PROBE_PROXY_VOLUME UNITY_LIGHTMAP_FULL_HDR
+  api=4 type=1 insize=8131 outsize=0 kw=UNITY_PASS_FORWARDBASE DIRECTIONAL pd=UNITY_ENABLE_REFLECTION_BUFFERS UNITY_USE_DITHER_MASK_FOR_ALPHABLENDED_SHADOWS UNITY_PBS_USE_BRDF1 UNITY_SPECCUBE_BOX_PROJECTION UNITY_SPECCUBE_BLENDING UNITY_ENABLE_DETAIL_NORMALMAP SHADER_API_DESKTOP UNITY_COLORSPACE_GAMMA UNITY_LIGHT_PROBE_PROXY_VOLUME UNITY_LIGHTMAP_FULL_HDR ok=0
+Cmd: compileComputeKernel
+  error: 1 plat 4 at MinMaxHeight.compute(27): implicit truncation of vector type
+  error: 1 plat 4 at MinMaxHeight.compute(28): implicit truncation of vector type
+  api=4 insize=1129 outsize=950 ok=1
+
+Quitting shader compiler process

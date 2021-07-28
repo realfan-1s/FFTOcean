@@ -32,14 +32,17 @@ Shader "Custom/Ocean"
             // Physically based Standard lighting model, and enable shadows on all light types
             #pragma vertex vert
             #pragma fragment frag
-
             #include "UnityCG.cginc"
             #include "Lighting.cginc"
             #include "AutoLight.cginc"
+            #include "./CDLOD-GPU/Struct.compute"
+
+            StructuredBuffer<RenderPatch> patchList;
 
             struct input{
                 float4 vertex : POSITION;
                 float2 uv : TEXCOORD0;
+                uint instanceID : SV_INSTANCEID;
             };
 
             struct v2f{
@@ -61,6 +64,26 @@ Shader "Custom/Ocean"
             fixed _Roughness;
             fixed _SubSurfaceStrength;
             float _SubSurfaceScale;
+
+            v2f vert(input v){
+                v2f o;
+                // TODO: 渲染过程中添加RenderPatch
+                RenderPatch patch = patchList[v.instanceID];
+                float4 inVert = v.vertex;
+                uint lod = patch.lodLevel;
+                float scale = pow(2, lod);
+                inVert.xz *= scale;
+                inVert.xz += patch.worldPos;
+                // 采样位移贴图
+                o.uv = TRANSFORM_TEX(v.uv, _Displace);
+                float4 displace = tex2Dlod(_Displace, float4(o.uv, 0, 0));
+                v.vertex += float4(displace.xyz, 0);
+                // TODO: Patch渲染， 参考https://zhuanlan.zhihu.com/p/388844386
+                o.pos = UnityObjectToClipPos(inVert);
+                // o.pos = UnityObjectToClipPos(v.vertex);
+                o.worldPos = mul(unity_ObjectToWorld, v.vertex).xyz;
+                return o;
+            }
 
             // F(V, H) = F0 + (1 - F0) * pow(1 - (l * h)), 5)
             inline half3 FresnelSchlick(half3 col, half ldoth){
@@ -97,18 +120,6 @@ Shader "Custom/Ocean"
 
             inline half SchlickPhaseFunc(fixed3 lightDir, fixed3 normalDir, fixed3 viewDir, fixed roughness, float scale){
                 return saturate(pow(dot(viewDir, -(lightDir + 0.522 * normalDir)), scale)) * roughness;
-            }
-
-            v2f vert(input v){
-                v2f o;
-                // TODO: 渲染过程中添加RenderPatch
-                // 采样位移贴图
-                o.uv = TRANSFORM_TEX(v.uv, _Displace);
-                float4 displace = tex2Dlod(_Displace, float4(o.uv, 0, 0));
-                v.vertex += float4(displace.xyz, 0);
-                o.pos = UnityObjectToClipPos(v.vertex);
-                o.worldPos = mul(unity_ObjectToWorld, v.vertex).xyz;
-                return o;
             }
 
             half4 frag(v2f o) : SV_TARGET{

@@ -439,7 +439,6 @@ GameObject:
   m_Component:
   - component: {fileID: 1286073893}
   - component: {fileID: 1286073892}
-  - component: {fileID: 1286073894}
   m_Layer: 0
   m_Name: Ocean
   m_TagString: Untagged
@@ -460,7 +459,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   fftRatio: 9
-  meshWidth: 150
+  meshWidth: 200
   meshSize: 1024
   A: 50
   windAndSeed: {x: 1, y: 2, z: 9.352974, w: 2.3956165}
@@ -489,20 +488,6 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 1
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1286073894
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1286073891}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a1bcf62f7e3924849a3042197260aad7, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  terrianLod: {fileID: 7200000, guid: 0bbcb0da00a1de34aafe233048b7536a, type: 3}
-  heightMipMap: {fileID: 7200000, guid: d73fca5ed775f9b40baed9ca76ade71d, type: 3}
 --- !u!1 &1490815125
 GameObject:
   m_ObjectHideFlags: 0

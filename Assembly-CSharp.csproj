@@ -43,13 +43,13 @@
      <Compile Include="Assets\Scripts\CDLOD-CPU\Tree\QuadTree.cs" />
      <Compile Include="Assets\Scripts\Controller\GPUTerrian.cs" />
      <Compile Include="Assets\Scripts\Controller\LoadingMgr.cs" />
+     <Compile Include="Assets\Scripts\Controller\MinMaxTextureMgr.cs" />
      <Compile Include="Assets\Scripts\Controller\Ocean.cs" />
      <Compile Include="Assets\Scripts\Controller\SceneObject.cs" />
      <Compile Include="Assets\Scripts\Controller\SceneObjectController.cs" />
      <Compile Include="Assets\Scripts\Controller\playerController.cs" />
      <Compile Include="Assets\Scripts\PriorityQueue.cs" />
      <None Include="Assets\Scripts\Shaders\Common.compute" />
-     <None Include="Assets\Scripts\Shaders\CDLOD-GPU\Test.shader" />
      <None Include="Assets\Scripts\Shaders\Ocean.shader" />
      <None Include="Assets\Scripts\Shaders\Caustics.shader" />
      <None Include="Assets\Scripts\Shaders\FFTComputeShaders.compute" />
