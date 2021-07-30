@@ -7,7 +7,7 @@ public class Ocean : MonoBehaviour
     [Range(3, 14)]
     public int fftRatio = 8; // 纹理尺寸&进行FFT的次数
     public int meshWidth = 200; // 长宽
-    public float meshSize = 10; // 网格长度
+    public int meshSize = 10; // 网格长度
     public float A = 10;
     public Vector4 windAndSeed = new Vector4(1.0f, 2.0f, 0, 0);
     public float windScale = 2.0f; // 风的强度
@@ -59,9 +59,9 @@ public class Ocean : MonoBehaviour
     private MeshFilter filter;
     private Mesh mesh;
     private MeshRenderer render;
-    private int[] vertIndexes; // 三角形面索引
-    private Vector3[] positions; // 位置索引
-    private Vector2[] uvs; // uv坐标信息
+    // private int[] vertIndexes; // 三角形面索引
+    // private Vector3[] positions; // 位置索引
+    // private Vector2[] uvs; // uv坐标信息
     private MeshCollider meshCollider;
     #endregion
     void Awake()
@@ -80,25 +80,18 @@ public class Ocean : MonoBehaviour
         if (!meshCollider)
             meshCollider = gameObject.AddComponent<MeshCollider>();
 
-        mesh = new Mesh();
+        mesh = GenerateMesh(this.meshWidth, this.meshSize);
         filter.mesh = mesh;
         render.material = oceanMat;
         meshCollider.sharedMesh = mesh;
-        GenerateMesh();
+
         InitOceanValue();
-    }
-    private void Start()
-    {
-        // Test
-        MinMaxTextureMgr.instance.Generate(heightSpectrumRT, (int)Mathf.Pow(2, fftRatio));
     }
     // Update is called once per frame
     void Update()
     {
         time += Time.deltaTime * timeScale;
         ComputeOceanValues();
-        // Test
-        MinMaxTextureMgr.instance.RefreshInfos();
     }
 
     /// <summary>
@@ -118,14 +111,14 @@ public class Ocean : MonoBehaviour
             bubbleRT.Release();
             outputRT.Release();
         }
-        gaussianRT = CreateRT(fftSize);
-        heightSpectrumRT = CreateRT(fftSize);
-        displaceXSpectrumRT = CreateRT(fftSize);
-        displaceZSpectrumRT = CreateRT(fftSize);
-        displaceRT = CreateRT(fftSize);
-        bubbleRT = CreateRT(fftSize);
-        normalRT = CreateRT(fftSize);
-        outputRT = CreateRT(fftSize);
+        gaussianRT = CreateRT(fftSize, RenderTextureFormat.ARGBFloat);
+        heightSpectrumRT = CreateRT(fftSize, RenderTextureFormat.ARGBFloat);
+        displaceXSpectrumRT = CreateRT(fftSize, RenderTextureFormat.ARGBFloat);
+        displaceZSpectrumRT = CreateRT(fftSize, RenderTextureFormat.ARGBFloat);
+        displaceRT = CreateRT(fftSize, RenderTextureFormat.ARGBFloat);
+        bubbleRT = CreateRT(fftSize, RenderTextureFormat.ARGBFloat);
+        normalRT = CreateRT(fftSize, RenderTextureFormat.ARGBFloat);
+        outputRT = CreateRT(fftSize, RenderTextureFormat.ARGBFloat);
 
         // 获得kernel ID
         kernelComputeGaussian = oceanShader.FindKernel("ComputeGaussian");
@@ -239,13 +232,6 @@ public class Ocean : MonoBehaviour
 
         SetMaterial();
     }
-    RenderTexture CreateRT(int size)
-    {
-        var res = new RenderTexture(size, size, 0, RenderTextureFormat.ARGBFloat);
-        res.enableRandomWrite = true;
-        res.Create();
-        return res;
-    }
     void SetMaterial()
     {
         oceanMat.SetTexture("_Displace", displaceRT);
@@ -270,29 +256,34 @@ public class Ocean : MonoBehaviour
         input = outputRT;
         outputRT = rtTemp;
     }
-    void GenerateMesh()
+    public RenderTexture GetHeightRT()
     {
-        vertIndexes = new int[(meshWidth - 1) * (meshWidth - 1) * 6];
-        positions = new Vector3[meshWidth * meshWidth];
-        uvs = new Vector2[meshWidth * meshWidth];
+        return heightSpectrumRT;
+    }
+    public static Mesh GenerateMesh(int triWidth, int meshWidth)
+    {
+        var mesh = new Mesh();
+        int[] vertIndexes = new int[(triWidth) * (triWidth) * 6];
+        Vector3[] positions = new Vector3[(triWidth + 1) * (triWidth + 1)];
+        Vector2[] uvs = new Vector2[(triWidth + 1) * (triWidth + 1)];
         int idx = 0;
-        for (int i = 0; i < meshWidth; ++i)
+        for (int i = 0; i < triWidth + 1; ++i)
         {
-            for (int j = 0; j < meshWidth; ++j)
+            for (int j = 0; j < triWidth + 1; ++j)
             {
-                int index = i * meshWidth + j;
+                int index = i * triWidth + j;
 
-                positions[index] = new Vector3((j - meshWidth / 2.0f) * meshSize / meshWidth, 0, (i - meshWidth / 2.0f) * meshSize / meshWidth);
-                uvs[index] = new Vector2(j / (meshWidth - 1.0f), i / (meshWidth - 1.0f));
+                positions[index] = new Vector3((j - triWidth * 0.5f) * meshWidth / triWidth, 0, (i - triWidth * 0.5f) * meshWidth / triWidth);
+                uvs[index] = new Vector2(j / (triWidth - 1.0f), i / (triWidth - 1.0f));
 
-                if (i != meshWidth - 1 && j != meshWidth - 1)
+                if (i != triWidth && j != triWidth)
                 {
                     vertIndexes[idx++] = index;
-                    vertIndexes[idx++] = index + meshWidth;
-                    vertIndexes[idx++] = index + meshWidth + 1;
+                    vertIndexes[idx++] = index + triWidth;
+                    vertIndexes[idx++] = index + triWidth + 1;
 
                     vertIndexes[idx++] = index;
-                    vertIndexes[idx++] = index + meshWidth + 1;
+                    vertIndexes[idx++] = index + triWidth + 1;
                     vertIndexes[idx++] = index + 1;
                 }
             }
@@ -301,13 +292,29 @@ public class Ocean : MonoBehaviour
         mesh.vertices = positions;
         mesh.SetIndices(vertIndexes, MeshTopology.Triangles, 0);
         mesh.uv = uvs;
+        return mesh;
     }
-    public RenderTexture GetDisplaceRT()
+    public static RenderTexture CreateRT(int size, RenderTextureFormat format)
     {
-        return displaceRT;
+        var res = new RenderTexture(size, size, 0, format);
+        res.enableRandomWrite = true;
+        res.autoGenerateMips = false;
+        res.Create();
+        return res;
     }
-    public RenderTexture GetNormalRT()
+    public static RenderTexture CreateRT(RenderTexture[] mipmaps, RenderTextureFormat format)
     {
-        return normalRT;
+        var mip0 = mipmaps[0];
+        RenderTextureDescriptor desc = new RenderTextureDescriptor(mip0.width, mip0.width, format);
+        desc.autoGenerateMips = false;
+        desc.useMipMap = true;
+        RenderTexture rt = new RenderTexture(desc);
+        rt.filterMode = mip0.filterMode;
+        rt.Create();
+        for (int i = 0; i < mipmaps.Length; i++)
+        {
+            Graphics.CopyTexture(mipmaps[i], 0, 0, rt, 0, i);
+        }
+        return rt;
     }
 }

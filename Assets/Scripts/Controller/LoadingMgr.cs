@@ -1,5 +1,4 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 
 [System.Serializable]
@@ -22,7 +21,7 @@ public class DontMoveObj : ISceneObject
         _bounds = bound;
         _path = path;
         _pos = pos;
-        _size = new Vector3(sizeX,  sizeY, sizeZ);
+        _size = new Vector3(sizeX, sizeY, sizeZ);
         _rotation = rotation;
     }
     public void Load(Transform parent)

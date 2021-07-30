@@ -10,7 +10,6 @@ public class playerController : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        MinMaxTextureMgr.instance.RefreshInfos();
     }
 
     // Update is called once per frame

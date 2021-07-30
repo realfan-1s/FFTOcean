@@ -2,28 +2,35 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-/* TODO: 链接上ComputeShader，并调试 */
-// [RequireComponent(typeof(Ocean))]
+[RequireComponent(typeof(Ocean))]
 public class GPUTerrian : MonoBehaviour
 {
-    // private Ocean terrian;
-    // private RenderTexture heightRT;
-    // public ComputeShader terrianLod;
+    private Ocean ocean;
+    private RenderTexture heightRT;
+    private TerrainBuilder terrainBuilder;
+    TerrainBuilder terrain;
+    public Material test;
     private void Awake()
     {
-        // terrian = transform.GetComponent<Ocean>();
-        // heightRT = terrian.GetDisplaceRT();
-        // int heightSize = (int)Mathf.Pow(2, terrian.fftRatio);
-        // CreateMinMaxTexture(heightSize);
+        ocean = transform.GetComponent<Ocean>();
+        heightRT = ocean.GetHeightRT();
+        int heightSize = (int)Mathf.Pow(2, ocean.fftRatio);
+        MinMaxTextureMgr.instance.Generate(heightRT, heightSize);
+        terrain = new TerrainBuilder(MinMaxTextureMgr.instance.GetHeightMipMaps());
     }
     // Start is called before the first frame update
     void Start()
     {
+        test.SetTexture("_MainTex", terrain.tb.quadTreeMap);
     }
 
     // Update is called once per frame
     void Update()
     {
-
+        MinMaxTextureMgr.instance.RefreshInfos();
+    }
+    private void OnDestroy()
+    {
+        terrain.Dispose();
     }
 }
