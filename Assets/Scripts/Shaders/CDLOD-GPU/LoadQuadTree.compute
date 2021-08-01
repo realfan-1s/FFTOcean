@@ -34,13 +34,13 @@ uniform float controllerC;
 其中:
 - nodeSize为Node的边长(米)
 - nodeCount等于WorldSize/nodeSize
-- patchExtent等于nodeSize/16,拥挤计算包围盒的半高宽
+- patchExtent等于nodeSize/16,用于计算包围盒的半高宽
 */
 uniform float3 worldLodParams[6];
 uniform uint offsetOfNodeID[6];
 /* 裁剪相关变量 */
 uniform float4 _CameraFrustumPlanes[6];
-AppendStructuredBuffer<RenderPatch> CulledPatchList;
+AppendStructuredBuffer<RenderPatch> culledPatchList;
 
 uint GetNodeID(uint2 nodeLodCount, uint lodLevel);
 float GetNodeSize(uint lodLevel);
@@ -52,7 +52,7 @@ float3 GetNodeCenterPos(uint2 nodeLodCount, uint lodLevel);
 RenderPatch GeneratePatch(uint3 nodeLodCount, uint2 offset);
 bool IsOutSidePlane(float4 plane, float3 pos);
 bool IsAABBOutOfPlane(float4 plane, float3 boundMin, float boundMax);
-bool FrustCull(float4 plane[6], Bounds bound); 
+bool FrustCull(float4 plane[6], Bounds bound);
 Bounds GetPatchBounds(RenderPatch patch);
 
 [numthreads(5, 5, 1)]
@@ -116,7 +116,7 @@ void CreatePatches(uint3 id : SV_DISPATCHTHREADID, uint3 groupId : SV_GROUPID, u
     Bounds bound = GetPatchBounds(patch);
     if (FrustCull(_CameraFrustumPlanes, bound))
         return;
-    CulledPatchList.Append(patch);
+    culledPatchList.Append(patch);
 } 
 
 // 在GPU中替代unordered_map，建立一个uint3->uint的映射，将uint作为下标数组索引NodeDescriptBuffer

@@ -37,7 +37,6 @@ Shader "Custom/Ocean"
             #include "AutoLight.cginc"
             #include "./CDLOD-GPU/Struct.compute"
 
-            StructuredBuffer<RenderPatch> patchList;
 
             struct input{
                 float4 vertex : POSITION;
@@ -51,6 +50,7 @@ Shader "Custom/Ocean"
                 float3 worldPos : TEXCOORD1;
             };
 
+            StructuredBuffer<RenderPatch> patchList;
             fixed4 _ShallowColor;
             fixed4 _DeepColor;
             fixed4 _BubbleColor;

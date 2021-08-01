@@ -292,6 +292,7 @@ public class Ocean : MonoBehaviour
         mesh.vertices = positions;
         mesh.SetIndices(vertIndexes, MeshTopology.Triangles, 0);
         mesh.uv = uvs;
+
         return mesh;
     }
     public static RenderTexture CreateRT(int size, RenderTextureFormat format)
