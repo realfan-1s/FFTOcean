@@ -46,7 +46,6 @@ public class Ocean : MonoBehaviour
     #endregion
 
     [Header("海洋材质")]
-    #region
     public Material oceanMat;
     // public Material displaceXMat;
     // public Material heightMat;
@@ -54,37 +53,36 @@ public class Ocean : MonoBehaviour
     // public Material displaceMat;
     // public Material normalMat;
     // public Material bubbleMat;
-    #endregion
-    #region 
-    [Header("Mesh相关参数")]
-    private MeshFilter filter;
-    private Mesh mesh;
-    private MeshRenderer render;
+    // #region
+    // [Header("Mesh相关参数")]
+    // private MeshFilter filter;
+    // private Mesh mesh;
+    // private MeshRenderer render;
     // private int[] vertIndexes; // 三角形面索引
     // private Vector3[] positions; // 位置索引
     // private Vector2[] uvs; // uv坐标信息
-    private MeshCollider meshCollider;
-    #endregion
+    // private MeshCollider meshCollider;
+    // #endregion
     void Awake()
     {
-        // 添加mesh renderer、mesh Filter
-        filter = gameObject.GetComponent<MeshFilter>();
-        if (!filter)
-        {
-            filter = gameObject.AddComponent<MeshFilter>();
-        }
+        // // 添加mesh renderer、mesh Filter
+        // filter = gameObject.GetComponent<MeshFilter>();
+        // if (!filter)
+        // {
+        //     filter = gameObject.AddComponent<MeshFilter>();
+        // }
 
-        render = gameObject.GetComponent<MeshRenderer>();
-        if (!render)
-            render = gameObject.AddComponent<MeshRenderer>();
-        meshCollider = gameObject.GetComponent<MeshCollider>();
-        if (!meshCollider)
-            meshCollider = gameObject.AddComponent<MeshCollider>();
+        // render = gameObject.GetComponent<MeshRenderer>();
+        // if (!render)
+        //     render = gameObject.AddComponent<MeshRenderer>();
+        // meshCollider = gameObject.GetComponent<MeshCollider>();
+        // if (!meshCollider)
+        //     meshCollider = gameObject.AddComponent<MeshCollider>();
 
-        mesh = GenerateMesh(this.meshWidth, this.meshSize);
-        filter.mesh = mesh;
-        render.material = oceanMat;
-        meshCollider.sharedMesh = mesh;
+        // mesh = GenerateMesh(this.meshWidth, this.meshSize);
+        // filter.mesh = mesh;
+        // render.material = oceanMat;
+        // meshCollider.sharedMesh = mesh;
 
         InitOceanValue();
     }

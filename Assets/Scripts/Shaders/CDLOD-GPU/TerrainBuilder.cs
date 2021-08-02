@@ -269,12 +269,20 @@ public class TerrainBuilder : IDisposable
         commandBuffer.SetComputeVectorParam(quadTreeCS, camPosID, cam.transform.position);
         commandBuffer.SetComputeVectorParam(quadTreeCS, worldSizeID, tb.worldSize);
 
-        // TODO:四叉树分割计算得到初步的patches 
+        // TODO:四叉树分割计算得到初步的patches
         for (int lod = TerrainBase.MAX_LOD_DEPTH; lod > -1; --lod)
         {
             commandBuffer.SetComputeIntParam(quadTreeCS, curLodID, lod);
-        }
+            if(lod == TerrainBase.MAX_LOD_DEPTH){
 
+            } else {
+
+            }
+        }
+        // 生成patch
+        commandBuffer.CopyCounterValue(finalNodeList, _indirectArgs, 0);
+        commandBuffer.DispatchCompute(quadTreeCS, kernelCreatePatches, indirectArgs, 0);
+        commandBuffer.CopyCounterValue(culledPatchList, _patchIndirectArgs, 4);
         Graphics.ExecuteCommandBuffer(commandBuffer);
     }
 }
