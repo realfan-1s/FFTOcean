@@ -596,6 +596,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   test: {fileID: 2100000, guid: 3b8391fb372be3f4ab6df2cb8e3459df, type: 2}
+  meshSize: 0
+  nodeEvaluationDist: 0
 --- !u!1 &1490815125
 GameObject:
   m_ObjectHideFlags: 0

@@ -67,7 +67,6 @@ Shader "Custom/Ocean"
 
             v2f vert(input v){
                 v2f o;
-                // TODO: 渲染过程中添加RenderPatch
                 RenderPatch patch = patchList[v.instanceID];
                 float4 inVert = v.vertex;
                 uint lod = patch.lodLevel;

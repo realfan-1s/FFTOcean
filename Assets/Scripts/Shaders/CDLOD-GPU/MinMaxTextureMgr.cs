@@ -115,7 +115,6 @@ public class MinMaxTextureMgr
         return mipMapRTs.ToArray();
     }
     /*
-    TODO: 同步改写成异步调用, 算了没那能力
     void CalculateMipMap(int limit, int count)
     {
         CalculateMipMap(mipMapRTs[mipMapRTs.Count - 1], count, (tex) =>

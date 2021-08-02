@@ -6,6 +6,7 @@ public class Ocean : MonoBehaviour
     [Header("FFT控制参数")]
     [Range(3, 14)]
     public int fftRatio = 8; // 纹理尺寸&进行FFT的次数
+    // TODO：未来不再需要
     public int meshWidth = 200; // 长宽
     public int meshSize = 10; // 网格长度
     public float A = 10;
@@ -250,8 +251,6 @@ public class Ocean : MonoBehaviour
         oceanShader.SetTexture(kernel, "inputRT", input);
         oceanShader.SetTexture(kernel, "outputRT", outputRT);
         oceanShader.Dispatch(kernel, fftSize / 8, fftSize / 8, 1);
-
-        // 纹理交换
         var rtTemp = input;
         input = outputRT;
         outputRT = rtTemp;
