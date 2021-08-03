@@ -11,7 +11,7 @@
 #include "Common.compute"
 
 uint textureSize; // 纹理的大小
-float oceanLength; // 每一块海洋的高度
+float oceanLength; // 每一块海洋的长度
 float A; // phillips频谱参数
 float4 windAndSeed; // 风力大小(xy),随机数种子(zw)
 uint randState;

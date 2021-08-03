@@ -38,12 +38,14 @@ public class MinMaxTextureMgr
         kernelHeightMipMap = minMaxCS.FindKernel("HeightMipMap");
         kernelPatchMinMaxHeight = minMaxCS.FindKernel("PatchMinMaxHeight");
     }
-    public void Generate(RenderTexture _heightMap, int _patchMapSize)
+    public void Generate(RenderTexture _heightRT, int _patchMapSize)
     {
-        heightRT = _heightMap;
+        if (_heightRT == null)
+            Debug.Log("heightRT为空");
+        heightRT = _heightRT;
         patchMapSize = _patchMapSize;
         mipMapRTs.Add(Ocean.CreateRT(patchMapSize, RenderTextureFormat.ARGB32));
-        CreateMipMap(8);
+        CreateMipMap(9);
         isInit = true;
     }
     public void RefreshInfos()
@@ -63,12 +65,6 @@ public class MinMaxTextureMgr
             CalculateMipMap(mipMapRTs[i - 1], mipMapRTs[i]);
         }
     }
-    // public RenderTexture GetMinMaxHeightRT(int pos = 0)
-    // {
-    //     if (pos >= mipMapRTs.Count)
-    //         Debug.Log("所给值超出mipmap个数,mipmap最多为 " + mipMapRTs.Count + "个");
-    //     return this.mipMapRTs[pos];
-    // }
     void CalculateGroupXY(int index, int size, out int groupX, out int groupY)
     {
         uint threadX, threadY, threadZ;
@@ -115,6 +111,7 @@ public class MinMaxTextureMgr
         return mipMapRTs.ToArray();
     }
     /*
+    TODO: 改写为异步形式
     void CalculateMipMap(int limit, int count)
     {
         CalculateMipMap(mipMapRTs[mipMapRTs.Count - 1], count, (tex) =>

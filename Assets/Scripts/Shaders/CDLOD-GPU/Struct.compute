@@ -9,7 +9,7 @@
 
 // 是否是叶子结点
 struct NodeDescription{
-    bool isLeaf;
+    uint isLeaf;
 };
 
 struct RenderPatch{

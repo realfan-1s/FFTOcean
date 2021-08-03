@@ -36,7 +36,7 @@ uniform float controllerC;// 用户可控制系数
 uniform float4 worldLodParams[6];
 uniform uint offsetOfNodeID[6];
 /* 裁剪相关变量 */
-uniform float4 _CameraFrustumPlanes[6];
+uniform float4 cameraFrustumPlanes[6];
 AppendStructuredBuffer<RenderPatch> culledPatchList;
 
 uint GetNodeID(uint2 nodeLodCount, uint lodLevel);
@@ -76,11 +76,11 @@ void TraverseQuadTree(uint3 id : SV_DispatchThreadID){
         appendNodeList.Append(nodeLodCount * 2 + uint2(1, 0));
         appendNodeList.Append(nodeLodCount * 2 + uint2(0, 1));
         appendNodeList.Append(nodeLodCount * 2 + uint2(1, 1));
-        nodeDesc.isLeaf = true;
+        nodeDesc.isLeaf = 1;
     } else {
         // 不划分四叉树，直接加入到最终节点中
         appendFinalNodeList.Append(uint3(nodeLodCount, curLOD));
-        nodeDesc.isLeaf = false;
+        nodeDesc.isLeaf = 0;
     }
     nodeInfoList[nodeID] = nodeDesc;
 }
@@ -111,7 +111,7 @@ void CreatePatches(uint3 id : SV_DISPATCHTHREADID, uint3 groupId : SV_GROUPID, u
     RenderPatch patch = GeneratePatch(nodeLodCount, patchOffset);
 
     Bounds bound = GetPatchBounds(patch);
-    if (FrustCull(_CameraFrustumPlanes, bound))
+    if (FrustCull(cameraFrustumPlanes, bound))
         return;
     culledPatchList.Append(patch);
 } 

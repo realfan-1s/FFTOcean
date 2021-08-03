@@ -16,7 +16,6 @@ Shader "Custom/Ocean"
         _Metalness("Metalness", Range(0, 1)) = 0.5
         _Roughness("roughness", Range(0, 1)) = 0.5
         _SubSurfaceStrength("SubSurfaceStrength", Range(0, 1)) = 0.1
-        _SubSurfaceScale("Subsurface Scale", Range(0.1, 5)) = 2.28
         [HideInInspector]_Displace ("_Displace", 2D) = "white" {}
         [HideInInspector]_Normal("_Normal", 2D) = "white" {}
         [HideInInspector]_Bubbles("_Bubbles", 2D) = "White" {}
@@ -63,7 +62,6 @@ Shader "Custom/Ocean"
             fixed _Metalness;
             fixed _Roughness;
             fixed _SubSurfaceStrength;
-            float _SubSurfaceScale;
 
             v2f vert(input v){
                 v2f o;
@@ -80,7 +78,7 @@ Shader "Custom/Ocean"
                 // TODO: Patch渲染， 参考https://zhuanlan.zhihu.com/p/388844386
                 o.pos = UnityObjectToClipPos(inVert);
                 // o.pos = UnityObjectToClipPos(v.vertex);
-                o.worldPos = mul(unity_ObjectToWorld, v.vertex).xyz;
+                o.worldPos = mul(unity_ObjectToWorld, inVert).xyz;
                 return o;
             }
 
@@ -117,8 +115,8 @@ Shader "Custom/Ocean"
                 return 0.5 / (lambdaL + lambdaV + 1e-5f);
             }
 
-            inline half SchlickPhaseFunc(fixed3 lightDir, fixed3 normalDir, fixed3 viewDir, fixed roughness, float scale){
-                return saturate(pow(dot(viewDir, -(lightDir + 0.522 * normalDir)), scale)) * roughness;
+            inline half SchlickPhaseFunc(fixed3 lightDir, fixed3 normalDir, fixed3 viewDir, fixed roughness){
+                return saturate(pow(dot(viewDir, -(lightDir + 0.522 * normalDir)), 5.0)) * roughness;
             }
 
             half4 frag(v2f o) : SV_TARGET{
@@ -169,7 +167,7 @@ Shader "Custom/Ocean"
                 half surfaceReduction = 1.0 / (r2 + 1.0);
                 half3 indirectiveSpceular = surfaceReduction * envMap.rgb * FresnelLerp(F0, grazingTerm, ndotv);
                 // 水体次表面散射, 参考https://www.alanzucconi.com/2017/08/30/fast-subsurface-scattering-1/
-                half3 SubSurfaceScatter = envMap.rgb * SchlickPhaseFunc(lightDir, normalDir, viewDir, _SubSurfaceStrength, _SubSurfaceScale);
+                half3 SubSurfaceScatter = envMap.rgb * SchlickPhaseFunc(lightDir, normalDir, viewDir, _SubSurfaceStrength);
 
                 half3 col = UNITY_LIGHTMODEL_AMBIENT.rgb + UNITY_PI * (specualr + diffuse) * ndotl + indirectiveSpceular + SubSurfaceScatter;
                 return half4(col, 1);

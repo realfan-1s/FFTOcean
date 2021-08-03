@@ -7,8 +7,8 @@ public class Ocean : MonoBehaviour
     [Range(3, 14)]
     public int fftRatio = 8; // 纹理尺寸&进行FFT的次数
     // TODO：未来不再需要
-    public int meshWidth = 200; // 长宽
-    public int meshSize = 10; // 网格长度
+    // public int meshWidth = 200; // 长宽
+    // public int meshSize = 10; // 网格长度
     public float A = 10;
     public Vector4 windAndSeed = new Vector4(1.0f, 2.0f, 0, 0);
     public float windScale = 2.0f; // 风的强度
@@ -83,7 +83,6 @@ public class Ocean : MonoBehaviour
         // filter.mesh = mesh;
         // render.material = oceanMat;
         // meshCollider.sharedMesh = mesh;
-
         InitOceanValue();
     }
     // Update is called once per frame
@@ -132,7 +131,7 @@ public class Ocean : MonoBehaviour
 
         // 传入关键参数
         oceanShader.SetInt("textureSize", fftSize);
-        oceanShader.SetFloat("oceanLength", meshSize);
+        // oceanShader.SetFloat("oceanLength", meshSize);
 
         // 计算高斯随机数
         oceanShader.SetTexture(kernelComputeGaussian, "gaussianRT", gaussianRT);
@@ -289,22 +288,21 @@ public class Ocean : MonoBehaviour
         mesh.vertices = positions;
         mesh.SetIndices(vertIndexes, MeshTopology.Triangles, 0);
         mesh.uv = uvs;
-
         return mesh;
     }
     public static RenderTexture CreateRT(int size, RenderTextureFormat format)
     {
-        var res = new RenderTexture(size, size, 0, format);
-        res.enableRandomWrite = true;
-        res.autoGenerateMips = false;
-        res.Create();
-        return res;
+        var rt = new RenderTexture(size, size, 0, format);
+        rt.enableRandomWrite = true;
+        rt.autoGenerateMips = false;
+        rt.Create();
+        return rt;
     }
     public static RenderTexture CreateRT(RenderTexture[] mipmaps, RenderTextureFormat format)
     {
         var mip0 = mipmaps[0];
         RenderTextureDescriptor desc = new RenderTextureDescriptor(mip0.width, mip0.width, format);
-        desc.autoGenerateMips = false;
+        desc.autoGenerateMips = true;
         desc.useMipMap = true;
         RenderTexture rt = new RenderTexture(desc);
         rt.filterMode = mip0.filterMode;

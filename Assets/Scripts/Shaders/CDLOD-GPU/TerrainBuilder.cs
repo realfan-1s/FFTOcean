@@ -3,6 +3,7 @@ using System;
 using UnityEngine;
 using UnityEditor;
 using UnityEngine.Rendering;
+using Unity.Mathematics;
 
 /*
 ----------------------------------------------------------------
@@ -39,9 +40,11 @@ public class TerrainBase
     {
         get
         {
-            if (_minMaxHeightRT == null)
-                _minMaxHeightRT = Ocean.CreateRT(minMaxHeightMaps, RenderTextureFormat.ARGB32);
-            return _minMaxHeightRT;
+            // if (_minMaxHeightRT == null){
+            //     _minMaxHeightRT = Ocean.CreateRT(minMaxHeightMaps, RenderTextureFormat.RG32);
+            // }
+            // return _minMaxHeightRT;
+            return minMaxHeightMaps[0];
         }
     }
     private RenderTexture _quadTreeRT;
@@ -80,6 +83,8 @@ public class TerrainBuilder : IDisposable
     private static readonly int camPosID = Shader.PropertyToID("cameraPos");
     private static readonly int worldSizeID = Shader.PropertyToID("worldSize");
     private static readonly int curLodID = Shader.PropertyToID("curLOD");
+    private static readonly int consumeNodeListID = Shader.PropertyToID("consumNodeList");
+    private static readonly int appendNodeListID = Shader.PropertyToID("appendNodeList");
     #endregion
     #region "Compute shader kernel"
     private static readonly int kernelCreateQuadTree = quadTreeCS.FindKernel("CreateQuadTree");
@@ -91,17 +96,15 @@ public class TerrainBuilder : IDisposable
     // 具体参考https://docs.unity.cn/cn/2021.1/ScriptReference/ComputeBuffer.html
     private ComputeBuffer consumeNodeList;
     private ComputeBuffer appendNodeList;
-    private ComputeBuffer appendFinalNodeList;
     private ComputeBuffer nodeInfoList;
     private ComputeBuffer finalNodeList;
     private ComputeBuffer maxNodeList;
     // 传入shader中
     private ComputeBuffer _culledPatchList;
-    private ComputeBuffer culledPatchList { get => _culledPatchList; }
+    public ComputeBuffer culledPatchList { get => _culledPatchList; }
     // 从gpu中拷贝到cpu中，用于之后创建patch
     // indirectArgs 拷贝自finalNodeListBuffer, patchIndirectArgs 拷贝自culledPatchList
     private ComputeBuffer _indirectArgs;
-    public ComputeBuffer indirectArgs { get => _indirectArgs; }
     private ComputeBuffer _patchIndirectArgs;
     public ComputeBuffer patchIndirectArgs { get => _patchIndirectArgs; }
     #endregion
@@ -120,6 +123,7 @@ public class TerrainBuilder : IDisposable
     private bool changeC = true;
     public float conrollerC
     {
+        get => _controllerC.x;
         set
         {
             _controllerC.x = value;
@@ -135,12 +139,12 @@ public class TerrainBuilder : IDisposable
         maxBufferSize = _maxBufferSize;
         // 构造函数第一个参数接收输出buffer的长度，第二个参数代表每个元素的长度，第三个参数表示compute buffer的类型
         consumeNodeList = new ComputeBuffer(50, 8, ComputeBufferType.Append);
-        maxNodeList = new ComputeBuffer(TerrainBase.MAX_LOD_DEPTH * TerrainBase.MAX_LOD_DEPTH, 8, ComputeBufferType.Append);
         appendNodeList = new ComputeBuffer(50, 8, ComputeBufferType.Append);
-        appendFinalNodeList = new ComputeBuffer(maxBufferSize, 12, ComputeBufferType.Append);
+        maxNodeList = new ComputeBuffer(TerrainBase.MAX_LOD_DEPTH * TerrainBase.MAX_LOD_DEPTH, 8, ComputeBufferType.Append);
+        InitMaxLodData();
         nodeInfoList = new ComputeBuffer((int)(TerrainBase.MAX_NODE_ID + 1), 4);
         finalNodeList = new ComputeBuffer(maxBufferSize, 12, ComputeBufferType.Append);
-        _culledPatchList = new ComputeBuffer(maxBufferSize * 64, 20, ComputeBufferType.Append);
+        _culledPatchList = new ComputeBuffer(maxBufferSize * 64, 36, ComputeBufferType.Append);
         _indirectArgs = new ComputeBuffer(3, 4, ComputeBufferType.IndirectArguments);
         _indirectArgs.SetData(new uint[] { 1, 1, 1 });
         _patchIndirectArgs = new ComputeBuffer(5, 4, ComputeBufferType.IndirectArguments);
@@ -154,7 +158,6 @@ public class TerrainBuilder : IDisposable
         consumeNodeList.Dispose();
         maxNodeList.Dispose();
         appendNodeList.Dispose();
-        appendFinalNodeList.Dispose();
         nodeInfoList.Dispose();
         finalNodeList.Dispose();
         _culledPatchList.Dispose();
@@ -192,19 +195,33 @@ public class TerrainBuilder : IDisposable
         quadTreeCS.SetVectorArray("worldLodParams", worldLodParams);
         quadTreeCS.SetInts("offsetOfNodeID", offsetOfNodeID);
     }
+    void InitMaxLodData()
+    {
+        uint2[] datas = new uint2[TerrainBase.MAX_LOD_DEPTH * TerrainBase.MAX_LOD_DEPTH];
+        var index = 0;
+        for (uint i = 0; i < TerrainBase.MAX_LOD_DEPTH; i++)
+        {
+            for (uint j = 0; j < TerrainBase.MAX_LOD_DEPTH; j++)
+            {
+                datas[index] = new uint2(i, j);
+                index++;
+            }
+        }
+        maxNodeList.SetData(datas);
+    }
     void BindShader(int index)
     {
         if (index == kernelTraverseQuadTree)
         {
             quadTreeCS.SetBuffer(index, "consumeNodeList", consumeNodeList);
             quadTreeCS.SetBuffer(index, "appendNodeList", appendNodeList);
-            quadTreeCS.SetBuffer(index, "appendFinalNodeList", appendFinalNodeList);
+            quadTreeCS.SetBuffer(index, "appendFinalNodeList", finalNodeList);
             quadTreeCS.SetBuffer(index, "nodeInfoList", nodeInfoList);
             quadTreeCS.SetTexture(index, "minMaxHeightRT", tb.minMaxHeightRT);
         }
         else if (index == kernelCreatePatches)
         {
-            quadTreeCS.SetBuffer(index, "culledPatchList", culledPatchList);
+            quadTreeCS.SetBuffer(index, "culledPatchList", _culledPatchList);
             quadTreeCS.SetBuffer(index, "finalNodeList", finalNodeList);
             quadTreeCS.SetTexture(index, "minMaxHeightRT", tb.minMaxHeightRT);
         }
@@ -247,18 +264,18 @@ public class TerrainBuilder : IDisposable
         maxNodeList.SetCounterValue((uint)maxNodeList.count);
         consumeNodeList.SetCounterValue(0);
         appendNodeList.SetCounterValue(0);
-        culledPatchList.SetCounterValue(0);
+        _culledPatchList.SetCounterValue(0);
         finalNodeList.SetCounterValue(0);
 
         var cam = Camera.main;
         GeometryUtility.CalculateFrustumPlanes(cam, cameraFrustumPlane);
         for (int i = 0; i < cameraFrustumPlane.Length; ++i)
         {
-            Vector4 v4 = cameraFrustumPlane[i].normal;
+            Vector4 v4 = (Vector4)cameraFrustumPlane[i].normal;
             v4.w = cameraFrustumPlane[i].distance;
             cameraFrustumPlanesV4[i] = v4;
         }
-        quadTreeCS.SetVectorArray("_CameraFrustumPlanes", cameraFrustumPlanesV4);
+        quadTreeCS.SetVectorArray("cameraFrustumPlanes", cameraFrustumPlanesV4);
 
         // 传入节点评价参数
         if (changeC)
@@ -269,20 +286,33 @@ public class TerrainBuilder : IDisposable
         commandBuffer.SetComputeVectorParam(quadTreeCS, camPosID, cam.transform.position);
         commandBuffer.SetComputeVectorParam(quadTreeCS, worldSizeID, tb.worldSize);
 
-        // TODO:四叉树分割计算得到初步的patches
-        for (int lod = TerrainBase.MAX_LOD_DEPTH; lod > -1; --lod)
+        commandBuffer.CopyCounterValue(maxNodeList, _indirectArgs, 0);
+        for (int lod = TerrainBase.MAX_LOD_DEPTH; lod > -1; lod--)
         {
             commandBuffer.SetComputeIntParam(quadTreeCS, curLodID, lod);
-            if(lod == TerrainBase.MAX_LOD_DEPTH){
-
-            } else {
-
+            if (lod == TerrainBase.MAX_LOD_DEPTH)
+            {
+                commandBuffer.SetComputeBufferParam(quadTreeCS, kernelTraverseQuadTree, consumeNodeListID, maxNodeList);
             }
+            else
+            {
+                commandBuffer.SetComputeBufferParam(quadTreeCS, kernelTraverseQuadTree, consumeNodeListID, consumeNodeList);
+            }
+            commandBuffer.SetComputeBufferParam(quadTreeCS, kernelTraverseQuadTree, appendNodeListID, appendNodeList);
+            commandBuffer.DispatchCompute(quadTreeCS, kernelTraverseQuadTree, _indirectArgs, 0);
+            commandBuffer.CopyCounterValue(appendNodeList, _indirectArgs, 0);
+            // var temp = consumeNodeList;
+            // consumeNodeList = appendNodeList;
+            // appendNodeList = temp;
         }
-        // 生成patch
+        // TODO:生成LOD Map弥合接缝
         commandBuffer.CopyCounterValue(finalNodeList, _indirectArgs, 0);
-        commandBuffer.DispatchCompute(quadTreeCS, kernelCreatePatches, indirectArgs, 0);
-        commandBuffer.CopyCounterValue(culledPatchList, _patchIndirectArgs, 4);
+        commandBuffer.DispatchCompute(quadTreeCS, kernelCreatePatches, _indirectArgs, 0);
+        commandBuffer.CopyCounterValue(_culledPatchList, _patchIndirectArgs, 4);
         Graphics.ExecuteCommandBuffer(commandBuffer);
+
+        var data = new uint2[maxNodeList.count];
+        maxNodeList.GetData(data);
+        Debug.Log(data[1]);
     }
 }
