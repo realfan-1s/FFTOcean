@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using System.Collections.Generic;
 
 public class Ocean : MonoBehaviour
 {
@@ -256,38 +257,79 @@ public class Ocean : MonoBehaviour
     {
         return heightSpectrumRT;
     }
-    public static Mesh GenerateMesh(int triWidth, int meshWidth)
+    public static Mesh GenerateMesh(int size)
     {
+        // var mesh = new Mesh();
+        // int[] vertIndexes = new int[(triWidth) * (triWidth) * 6];
+        // Vector3[] positions = new Vector3[(triWidth + 1) * (triWidth + 1)];
+        // Vector2[] uvs = new Vector2[(triWidth + 1) * (triWidth + 1)];
+        // int idx = 0;
+        // for (int i = 0; i < triWidth + 1; ++i)
+        // {
+        //     for (int j = 0; j < triWidth + 1; ++j)
+        //     {
+        //         int index = i * triWidth + j;
+
+        //         positions[index] = new Vector3((j - triWidth * 0.5f) * meshWidth / triWidth, 0, (i - triWidth * 0.5f) * meshWidth / triWidth);
+        //         uvs[index] = new Vector2(j / (triWidth - 1.0f), i / (triWidth - 1.0f));
+
+        //         if (i != triWidth && j != triWidth)
+        //         {
+        //             vertIndexes[idx++] = index;
+        //             vertIndexes[idx++] = index + triWidth;
+        //             vertIndexes[idx++] = index + triWidth + 1;
+
+        //             vertIndexes[idx++] = index;
+        //             vertIndexes[idx++] = index + triWidth + 1;
+        //             vertIndexes[idx++] = index + 1;
+        //         }
+        //     }
+        // }
+
+        // mesh.vertices = positions;
+        // mesh.SetIndices(vertIndexes, MeshTopology.Triangles, 0);
+        // mesh.uv = uvs;
+        // return mesh;
+
         var mesh = new Mesh();
-        int[] vertIndexes = new int[(triWidth) * (triWidth) * 6];
-        Vector3[] positions = new Vector3[(triWidth + 1) * (triWidth + 1)];
-        Vector2[] uvs = new Vector2[(triWidth + 1) * (triWidth + 1)];
-        int idx = 0;
-        for (int i = 0; i < triWidth + 1; ++i)
+
+        var sizePerGrid = 0.5f;
+        var totalMeterSize = size * sizePerGrid;
+        var gridCount = size * size;
+        var triangleCount = gridCount * 2;
+
+        var vOffset = -totalMeterSize * 0.5f;
+
+        List<Vector3> vertices = new List<Vector3>();
+        List<Vector2> uvs = new List<Vector2>();
+        float uvStrip = 1f / size;
+        for (var z = 0; z <= size; z++)
         {
-            for (int j = 0; j < triWidth + 1; ++j)
+            for (var x = 0; x <= size; x++)
             {
-                int index = i * triWidth + j;
-
-                positions[index] = new Vector3((j - triWidth * 0.5f) * meshWidth / triWidth, 0, (i - triWidth * 0.5f) * meshWidth / triWidth);
-                uvs[index] = new Vector2(j / (triWidth - 1.0f), i / (triWidth - 1.0f));
-
-                if (i != triWidth && j != triWidth)
-                {
-                    vertIndexes[idx++] = index;
-                    vertIndexes[idx++] = index + triWidth;
-                    vertIndexes[idx++] = index + triWidth + 1;
-
-                    vertIndexes[idx++] = index;
-                    vertIndexes[idx++] = index + triWidth + 1;
-                    vertIndexes[idx++] = index + 1;
-                }
+                vertices.Add(new Vector3(vOffset + x * 0.5f, 0, vOffset + z * 0.5f));
+                uvs.Add(new Vector2(x * uvStrip, z * uvStrip));
             }
         }
+        mesh.SetVertices(vertices);
+        mesh.SetUVs(0, uvs);
 
-        mesh.vertices = positions;
-        mesh.SetIndices(vertIndexes, MeshTopology.Triangles, 0);
-        mesh.uv = uvs;
+        int[] indices = new int[triangleCount * 3];
+
+        for (var gridIndex = 0; gridIndex < gridCount; gridIndex++)
+        {
+            var offset = gridIndex * 6;
+            var vIndex = (gridIndex / size) * (size + 1) + (gridIndex % size);
+
+            indices[offset] = vIndex;
+            indices[offset + 1] = vIndex + size + 1;
+            indices[offset + 2] = vIndex + 1;
+            indices[offset + 3] = vIndex + 1;
+            indices[offset + 4] = vIndex + size + 1;
+            indices[offset + 5] = vIndex + size + 2;
+        }
+        mesh.SetIndices(indices, MeshTopology.Triangles, 0);
+        mesh.UploadMeshData(false);
         return mesh;
     }
     public static RenderTexture CreateRT(int size, RenderTextureFormat format)

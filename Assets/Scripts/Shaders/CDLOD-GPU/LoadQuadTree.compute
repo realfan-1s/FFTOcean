@@ -141,8 +141,8 @@ float2 GetNodeCenterPos2(uint2 nodeLodCount, uint lodLevel){
 
 float3 GetNodeCenterPos(uint2 nodeLodCount, uint lodLevel){
     float2 temp = GetNodeCenterPos2(nodeLodCount, lodLevel);
-    float2 minMaxHeight = minMaxHeightRT.mips[lodLevel + 3][nodeLodCount].xy;
-    float height = (minMaxHeight.x + minMaxHeight.y) * 0.5f * worldSize.y;
+    float2 minMaxHeight = minMaxHeightRT.mips[lodLevel + 2][nodeLodCount].xy;
+    float height = (minMaxHeight.x + minMaxHeight.y) * 0.5 * worldSize.y;
     return float3(temp.x, height, temp.y);
 }
 
@@ -154,8 +154,9 @@ float3 GetNodeCenterPos(uint2 nodeLodCount, uint lodLevel){
 bool EvaluateNode(uint2 nodeLodCount, uint lodLevel){
     float cameraDist = distance(cameraPos, GetNodeCenterPos(nodeLodCount, lodLevel));
     float f = cameraDist / (GetNodeSize(lodLevel) * controllerC);
-    if (f < 1)
+    if (f < 1){
         return true;
+    }
     return false;
 }
 
@@ -168,7 +169,7 @@ RenderPatch GeneratePatch(uint3 nodeLodCount, uint2 offset){
     uint2 patchLodCount = nodeLodCount.xy * NODE_DIVIDE_PATCHES + offset;
     float2 minMaxHeight = minMaxHeightRT.mips[lod][patchLodCount].rg * worldSize.y;
     RenderPatch patch;
-    patch.worldPos = nodeCenterPos + patchSize * (offset + (NODE_DIVIDE_PATCHES - 1) * 0.5);
+    patch.worldPos = nodeCenterPos + patchSize * (offset - (NODE_DIVIDE_PATCHES - 1) * 0.5);
     patch.minMaxHeight = minMaxHeight;
     patch.lodLevel = lod;
     return patch;

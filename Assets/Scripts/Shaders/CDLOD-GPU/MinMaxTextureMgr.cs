@@ -45,7 +45,7 @@ public class MinMaxTextureMgr
         heightRT = _heightRT;
         patchMapSize = _patchMapSize;
         mipMapRTs.Add(Ocean.CreateRT(patchMapSize, RenderTextureFormat.ARGB32));
-        CreateMipMap(9);
+        CreateMipMap(8);
         isInit = true;
     }
     public void RefreshInfos()
@@ -111,7 +111,6 @@ public class MinMaxTextureMgr
         return mipMapRTs.ToArray();
     }
     /*
-    TODO: 改写为异步形式
     void CalculateMipMap(int limit, int count)
     {
         CalculateMipMap(mipMapRTs[mipMapRTs.Count - 1], count, (tex) =>

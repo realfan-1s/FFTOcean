@@ -40,7 +40,7 @@ Material:
     - _Gloss: 256
     - _Glossiness: 1
     - _Metallic: 1
-    - _Metalness: 0.75
+    - _Metalness: 0.67
     - _Mips: 3.13
     - _Roughness: 0.7
     - _SubSurfaceScale: 5
