@@ -9,7 +9,7 @@ Material:
   m_PrefabAsset: {fileID: 0}
   m_Name: ocean
   m_Shader: {fileID: 4800000, guid: c57fb6dee884ddb42b4f08419e033bed, type: 3}
-  m_ShaderKeywords: 
+  m_ShaderKeywords: USE_PATCH_DEBUG
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
@@ -40,7 +40,7 @@ Material:
     - _Gloss: 256
     - _Glossiness: 1
     - _Metallic: 1
-    - _Metalness: 0.67
+    - _Metalness: 0.66
     - _Mips: 3.13
     - _Roughness: 0.7
     - _SubSurfaceScale: 5

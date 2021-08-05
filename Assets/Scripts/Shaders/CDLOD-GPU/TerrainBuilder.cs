@@ -23,7 +23,6 @@ public class TerrainBase
     public const int MAX_LOD_DEPTH = 5;
     // MAX LOD下，世界由4x4个区块组成
     public const int MAX_LOD_COUNT = 4;
-    private RenderTexture[] minMaxHeightMaps;
     private RenderTexture[] quadTreeMaps;
     private static Mesh _plane;
     public static Mesh plane
@@ -42,27 +41,22 @@ public class TerrainBase
     {
         get
         {
-            // if (_minMaxHeightRT == null){
-            //     _minMaxHeightRT = Ocean.CreateRT(minMaxHeightMaps, RenderTextureFormat.RG32);
-            // }
-            // return _minMaxHeightRT;
-            return minMaxHeightMaps[0];
+            return _minMaxHeightRT;
         }
     }
-    private RenderTexture _quadTreeRT;
-    public RenderTexture quadTreeRT
+    private RenderTexture _lodRT;
+    public RenderTexture lodRT
     {
         get
         {
-            if (_quadTreeRT == null)
-                _quadTreeRT = Ocean.CreateRT(quadTreeMaps, RenderTextureFormat.R16);
-            return _quadTreeRT;
+            if (_lodRT == null)
+                _lodRT = Ocean.CreateRT(128);
+            return _lodRT;
         }
     }
-    public TerrainBase(RenderTexture[] _minMaxHeightMaps, RenderTexture[] _quadTreeMaps, Vector3 _worldSize)
+    public TerrainBase(RenderTexture _minMaxHeightMaps, Vector3 _worldSize)
     {
-        minMaxHeightMaps = _minMaxHeightMaps;
-        quadTreeMaps = _quadTreeMaps;
+        _minMaxHeightRT = _minMaxHeightMaps;
         worldSize = _worldSize;
     }
 }
@@ -89,7 +83,6 @@ public class TerrainBuilder : IDisposable
     private static readonly int appendNodeListID = Shader.PropertyToID("appendNodeList");
     #endregion
     #region "Compute shader kernel"
-    private static readonly int kernelCreateQuadTree = quadTreeCS.FindKernel("CreateQuadTree");
     private static readonly int kernelTraverseQuadTree = quadTreeCS.FindKernel("TraverseQuadTree");
     private static readonly int kernelCreateLodMap = quadTreeCS.FindKernel("CreateLodMap");
     private static readonly int kernelCreatePatches = quadTreeCS.FindKernel("CreatePatches");
@@ -132,7 +125,7 @@ public class TerrainBuilder : IDisposable
         }
     }
     #endregion
-    public TerrainBuilder(RenderTexture[] _minMaxHeightMaps, Vector3 _worldSize, int _maxBufferSize = 200, int _maxLodSize = 4, int _lodCount = 6)
+    public TerrainBuilder(RenderTexture _minMaxHeightMaps, Vector3 _worldSize, int _maxBufferSize = 200, int _maxLodSize = 4, int _lodCount = 6)
     {
         maxLodSize = _maxLodSize;
         lodCount = _lodCount;
@@ -145,7 +138,7 @@ public class TerrainBuilder : IDisposable
         InitMaxLodData();
         nodeInfoList = new ComputeBuffer((int)TerrainBase.MAX_NODE_ID, 4);
         finalNodeList = new ComputeBuffer(maxBufferSize, 12, ComputeBufferType.Append);
-        _culledPatchList = new ComputeBuffer(maxBufferSize * 64, 24, ComputeBufferType.Append);
+        _culledPatchList = new ComputeBuffer(maxBufferSize * 64, 36, ComputeBufferType.Append);
         _indirectArgs = new ComputeBuffer(3, 4, ComputeBufferType.IndirectArguments);
         _indirectArgs.SetData(new uint[] { 1, 1, 1 });
         _patchIndirectArgs = new ComputeBuffer(5, 4, ComputeBufferType.IndirectArguments);
@@ -168,10 +161,9 @@ public class TerrainBuilder : IDisposable
         _indirectArgs.Dispose();
         _patchIndirectArgs.Dispose();
     }
-    void InitParams(RenderTexture[] _minMaxHeightMaps, Vector3 worldSize)
+    void InitParams(RenderTexture _minMaxHeightMaps, Vector3 worldSize)
     {
-        BindShader(kernelCreateQuadTree);
-        tb = new TerrainBase(_minMaxHeightMaps, quadMaps.ToArray(), worldSize);
+        tb = new TerrainBase(_minMaxHeightMaps, worldSize);
         BindShader(kernelTraverseQuadTree);
         BindShader(kernelCreatePatches);
         BindShader(kernelCreateLodMap);
@@ -189,8 +181,8 @@ public class TerrainBuilder : IDisposable
         {
             float nodeSize = wSize / nodeCount;
             float halfExtent = nodeSize / 16.0f;
-            worldLodParams[lod] = new Vector4(nodeSize, nodeCount, halfExtent, 0);
-            // Debug.Log("worldLodPararms[" + lod + "] = " + worldLodParams[lod]);
+            float sector = Mathf.Pow(2, lod);
+            worldLodParams[lod] = new Vector4(nodeSize, nodeCount, halfExtent, sector);
 
             offsetOfNodeID[lod * 4] = offset;
             offset += nodeCount * nodeCount;
@@ -229,38 +221,13 @@ public class TerrainBuilder : IDisposable
             quadTreeCS.SetBuffer(index, "culledPatchList", _culledPatchList);
             quadTreeCS.SetBuffer(index, "finalNodeList", finalNodeList);
             quadTreeCS.SetTexture(index, "minMaxHeightRT", tb.minMaxHeightRT);
+            quadTreeCS.SetTexture(index, "lodRT", tb.lodRT);
         }
         else if (index == kernelCreateLodMap)
         {
-            /*========== DO NOTHING! ==========*/
+            quadTreeCS.SetTexture(index, "lodRT", tb.lodRT);
+            quadTreeCS.SetBuffer(index, "nodeInfoList", nodeInfoList);
         }
-        else if (index == kernelCreateQuadTree)
-        {
-            CreateQuadMipMaps(this.lodCount - 1, 0);
-            quadMaps.Reverse();
-        }
-
-    }
-    void CreateQuadMipMaps(int mipLevel, int nodeOffset)
-    {
-        int mipSize = Convert.ToInt32(maxLodSize * Mathf.Pow(2, lodCount - 1 - mipLevel));
-        var desc = new RenderTextureDescriptor(mipSize, mipSize, RenderTextureFormat.R16, 0, 1);
-        desc.autoGenerateMips = false;
-        desc.enableRandomWrite = true;
-        RenderTexture rt = new RenderTexture(desc);
-        rt.Create();
-        CalculateQuadMipMaps(rt, mipLevel, nodeOffset);
-        quadMaps.Add(rt);
-        if (mipLevel > 0)
-            CreateQuadMipMaps(mipLevel - 1, nodeOffset + mipSize * mipSize);
-    }
-    void CalculateQuadMipMaps(RenderTexture rt, int mipLevel, int nodeOffset)
-    {
-        quadTreeCS.SetTexture(kernelCreateQuadTree, "quadTreeRT", rt);
-        quadTreeCS.SetInt("mipSize", rt.width);
-        quadTreeCS.SetInt("maxLodOffset", nodeOffset);
-        int group = Convert.ToInt32(Mathf.Pow(2, lodCount - mipLevel - 1));
-        quadTreeCS.Dispatch(kernelCreateQuadTree, group, group, 1);
     }
     public void Dispatch()
     {
@@ -292,7 +259,7 @@ public class TerrainBuilder : IDisposable
         commandBuffer.SetComputeVectorParam(quadTreeCS, worldSizeID, tb.worldSize);
 
         commandBuffer.CopyCounterValue(maxNodeList, _indirectArgs, 0);
-        for (int lod = TerrainBase.MAX_LOD_DEPTH; lod > -1; lod--)
+        for (int lod = TerrainBase.MAX_LOD_DEPTH; lod > -1; --lod)
         {
             commandBuffer.SetComputeIntParam(quadTreeCS, curLodID, lod);
             if (lod == TerrainBase.MAX_LOD_DEPTH)
@@ -311,6 +278,8 @@ public class TerrainBuilder : IDisposable
             appendNodeList = temp;
         }
         // TODO:生成LOD Map弥合接缝
+        commandBuffer.DispatchCompute(quadTreeCS, kernelCreateLodMap, 16, 16, 1);
+
         commandBuffer.CopyCounterValue(finalNodeList, _indirectArgs, 0);
         commandBuffer.DispatchCompute(quadTreeCS, kernelCreatePatches, _indirectArgs, 0);
         commandBuffer.CopyCounterValue(_culledPatchList, _patchIndirectArgs, 4);

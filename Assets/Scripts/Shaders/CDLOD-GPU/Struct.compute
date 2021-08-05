@@ -16,6 +16,7 @@ struct RenderPatch{
     float2 worldPos;
     float2 minMaxHeight;
     uint lodLevel;
+    float4 lodTrans;
 };
 
 struct Bounds{

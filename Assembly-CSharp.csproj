@@ -55,16 +55,8 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-     <Compile Include="Assets\Scripts\CDLOD-CPU\SceneDetector\IDetector.cs" />
-     <Compile Include="Assets\Scripts\CDLOD-CPU\SceneDetector\SceneDetector.cs" />
-     <Compile Include="Assets\Scripts\CDLOD-CPU\Tree\ISceneObject.cs" />
-     <Compile Include="Assets\Scripts\CDLOD-CPU\Tree\ISceneSeparateTree.cs" />
-     <Compile Include="Assets\Scripts\CDLOD-CPU\Tree\QuadTree.cs" />
      <Compile Include="Assets\Scripts\Controller\GPUTerrian.cs" />
-     <Compile Include="Assets\Scripts\Controller\LoadingMgr.cs" />
      <Compile Include="Assets\Scripts\Controller\Ocean.cs" />
-     <Compile Include="Assets\Scripts\Controller\SceneObject.cs" />
-     <Compile Include="Assets\Scripts\Controller\SceneObjectController.cs" />
      <Compile Include="Assets\Scripts\Controller\playerController.cs" />
      <Compile Include="Assets\Scripts\PriorityQueue.cs" />
      <Compile Include="Assets\Scripts\Shaders\CDLOD-GPU\MinMaxTextureMgr.cs" />

@@ -1,6 +1,4 @@
-﻿using System;
-using UnityEngine;
-using Unity.Mathematics;
+﻿using UnityEngine;
 
 [RequireComponent(typeof(Ocean))]
 public class GPUTerrian : MonoBehaviour
@@ -9,8 +7,9 @@ public class GPUTerrian : MonoBehaviour
     private TerrainBuilder terrain;
     [Range(0.1f, 2.0f)]
     public float nodeEvaluationDist = 1.4f;
-    private bool patchDebug = false;
+    public bool patchDebug = false;
     private int meshSize = 8192;
+    public Material test;
     private void Awake()
     {
         ocean = transform.GetComponent<Ocean>();
@@ -23,8 +22,10 @@ public class GPUTerrian : MonoBehaviour
     {
         ocean.oceanShader.SetFloat("oceanLength", meshSize);
         ocean.oceanMat.SetBuffer("patchList", terrain.culledPatchList);
+        ocean.oceanShader.SetFloats("worldSize", new float[3] { meshSize, ocean.heightScale, meshSize });
 
         terrain.conrollerC = this.nodeEvaluationDist;
+        test.SetTexture("_MainTex", terrain.tb.lodRT);
     }
 
     // Update is called once per frame
@@ -41,9 +42,6 @@ public class GPUTerrian : MonoBehaviour
         terrain.Dispatch();
         Graphics.DrawMeshInstancedIndirect(TerrainBase.plane, 0, ocean.oceanMat,
          new Bounds(Vector3.zero, Vector3.one * meshSize), terrain.patchIndirectArgs);
-
-        var data = new uint2x3[terrain.culledPatchList.count];
-        terrain.culledPatchList.GetData(data);
     }
     void OnDestroy()
     {

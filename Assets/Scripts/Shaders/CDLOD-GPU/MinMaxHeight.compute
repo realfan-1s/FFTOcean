@@ -1,4 +1,4 @@
-﻿#pragma kernel HeightMipMap
+﻿// #pragma kernel HeightMipMap
 #pragma kernel PatchMinMaxHeight
 
 Texture2D<float4> heightRT;
@@ -15,16 +15,16 @@ void PatchMinMaxHeight(uint3 id : SV_DISPATCHTHREADID){
     minMaxHeightRT[id.xy] = float4(minHeight, maxHeight, 0, 1);
 }
 
-Texture2D<float4> inRT;
-RWTexture2D<float4> reduceRT;
-[numthreads(4, 4, 1)]
-void HeightMipMap(uint3 id : SV_DISPATCHTHREADID){
-    uint2 inLodCount = id.xy * 2;
-    float2 h1 = inRT[inLodCount + uint2(0, 0)].xy;
-    float2 h2 = inRT[inLodCount + uint2(1, 0)].xy;
-    float2 h3 = inRT[inLodCount + uint2(0, 1)].xy;
-    float2 h4 = inRT[inLodCount + uint2(1, 1)].xy;
-    float minHeight = min(min(h1.x, h2.x), min(h3.x, h4.x));
-    float maxHeight = max(max(h1.y, h2.y), max(h3.y, h4.y));
-    reduceRT[id.xy] = float4(minHeight, maxHeight, 0, 1);
-}
+// Texture2D<float4> inRT;
+// RWTexture2D<float4> reduceRT;
+// [numthreads(4, 4, 1)]
+// void HeightMipMap(uint3 id : SV_DISPATCHTHREADID){
+//     uint2 inLodCount = id.xy * 2;
+//     float2 h1 = inRT[inLodCount + uint2(0, 0)].xy;
+//     float2 h2 = inRT[inLodCount + uint2(1, 0)].xy;
+//     float2 h3 = inRT[inLodCount + uint2(0, 1)].xy;
+//     float2 h4 = inRT[inLodCount + uint2(1, 1)].xy;
+//     float minHeight = min(min(h1.x, h2.x), min(h3.x, h4.x));
+//     float maxHeight = max(max(h1.y, h2.y), max(h3.y, h4.y));
+//     reduceRT[id.xy] = float4(minHeight, maxHeight, 0, 1);
+// }

@@ -29,7 +29,6 @@ Shader "Custom/Ocean"
 			#pragma target 4.0
 			#pragma multi_compile_fwdbase
 			#pragma shader_feature USE_PATCH_DEBUG
-			// Physically based Standard lighting model, and enable shadows on all light types
 			#pragma vertex vert
 			#pragma fragment frag
 			#include "UnityCG.cginc"
@@ -42,6 +41,7 @@ Shader "Custom/Ocean"
 				float4 vertex : POSITION;
 				float2 uv : TEXCOORD0;
 				uint instanceID : SV_INSTANCEID;
+				uint vertexID : SV_VERTEXID;
 			};
 
 			struct v2f{
@@ -52,6 +52,7 @@ Shader "Custom/Ocean"
 			};
 
 			StructuredBuffer<RenderPatch> patchList;
+			uniform float3 worldSize;
 			fixed4 _ShallowColor;
 			fixed4 _DeepColor;
 			fixed4 _BubbleColor;
@@ -66,12 +67,12 @@ Shader "Custom/Ocean"
 			fixed _SubSurfaceStrength;
 
 			static half3 quadTreeDebugs[6] = {
-				half3(0, 1, 0),
-				half3(0, 0, 1),
-				half3(1, 0, 0),
-				half3(1, 1, 0),
-				half3(0, 1, 1),
-				half3(1, 0, 1),
+				half3(0, 1, 0), // 绿
+				half3(0, 0, 1), // 蓝
+				half3(1, 0, 0), // 红
+				half3(1, 1, 0), // 黄
+				half3(0, 1, 1), // 蓝
+				half3(1, 0, 1), // 紫
 			};
 
 			v2f vert(input v){
@@ -80,8 +81,7 @@ Shader "Custom/Ocean"
 				float scale = pow(2, patch.lodLevel);
 				v.vertex.xz *= scale;
 				v.vertex.xz += patch.worldPos;
-				// TODO:Patch渲染，参考https://zhuanlan.zhihu.com/p/388844386
-				// 采样位移贴图
+				// TODO:UV映射不正确
 				o.uv = TRANSFORM_TEX(v.uv, _Displace);
 				float4 displace = tex2Dlod(_Displace, float4(o.uv, 0, 0));
 				v.vertex += float4(displace.xyz, 0);

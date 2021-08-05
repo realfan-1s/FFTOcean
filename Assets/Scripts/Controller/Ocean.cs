@@ -7,7 +7,6 @@ public class Ocean : MonoBehaviour
     [Header("FFT控制参数")]
     [Range(3, 14)]
     public int fftRatio = 8; // 纹理尺寸&进行FFT的次数
-    // TODO：未来不再需要
     // public int meshWidth = 200; // 长宽
     // public int meshSize = 10; // 网格长度
     public float A = 10;
@@ -255,7 +254,7 @@ public class Ocean : MonoBehaviour
     }
     public RenderTexture GetHeightRT()
     {
-        return heightSpectrumRT;
+        return displaceRT;
     }
     public static Mesh GenerateMesh(int size)
     {
@@ -331,6 +330,15 @@ public class Ocean : MonoBehaviour
         mesh.SetIndices(indices, MeshTopology.Triangles, 0);
         mesh.UploadMeshData(false);
         return mesh;
+    }
+    public static RenderTexture CreateRT(int size)
+    {
+        var desc = new RenderTextureDescriptor(size, size, RenderTextureFormat.R8);
+        desc.enableRandomWrite = true;
+        desc.autoGenerateMips = true;
+        var rt = new RenderTexture(desc);
+        rt.filterMode = FilterMode.Point;
+        return rt;
     }
     public static RenderTexture CreateRT(int size, RenderTextureFormat format)
     {

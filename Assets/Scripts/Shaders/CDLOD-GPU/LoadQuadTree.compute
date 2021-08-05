@@ -1,5 +1,4 @@
-﻿#pragma kernel CreateQuadTree
-#pragma kernel TraverseQuadTree
+﻿#pragma kernel TraverseQuadTree
 #pragma kernel CreateLodMap
 #pragma kernel CreatePatches
 
@@ -32,6 +31,7 @@ uniform float controllerC;// 用户可控制系数
 - nodeSize为Node的边长(米)
 - nodeCount等于WorldSize/nodeSize
 - patchExtent等于nodeSize/16,用于计算包围盒的半高宽
+- sectorCountPerNode等于2^lod
 */
 uniform float4 worldLodParams[6];
 uniform uint offsetOfNodeID[6];
@@ -42,6 +42,7 @@ AppendStructuredBuffer<RenderPatch> culledPatchList;
 uint GetNodeID(uint2 nodeLodCount, uint lodLevel);
 float GetNodeSize(uint lodLevel);
 float GetNodeCount(uint lodLevel);
+float GetSectorCount(uint lodLevel);
 // float GetPatchExtent(uint lodLevel);
 bool EvaluateNode(uint2 nodeLodCount, uint lodLevel);
 float2 NodeCenterPos(uint2 nodeLodCount, uint lodLevel);
@@ -52,11 +53,6 @@ bool IsAABBOutOfPlane(float4 plane, float3 boundMin, float boundMax);
 bool FrustCull(float4 plane[6], Bounds bound);
 Bounds GetPatchBounds(RenderPatch patch);
 
-[numthreads(5, 5, 1)]
-void CreateQuadTree(uint3 id :  SV_DISPATCHTHREADID){
-    uint nodeID = maxLodOffset + id.y * mipSize + id.x;
-    quadTreeRT[id.xy] = nodeID / 65535.0;
-}
 /*
 遍历二叉树
 1. 将当前PassLOD设为5
@@ -85,15 +81,22 @@ void TraverseQuadTree(uint3 id : SV_DispatchThreadID){
     nodeInfoList[nodeID] = nodeDesc;
 }
 
-// TODO: 生成lod map,弥补接缝处空隙,缝隙难被观察到，但会影响后续的遮挡剔除
+// 生成lod map, 每个像素表示每个的LOD值
 [numthreads(8, 8, 1)]
 void CreateLodMap(uint3 id : SV_DispatchThreadID){
-    // uint2 sector = id.xy;
-    // [unroll(10)]
-    // for (uint lod = MAX_LOD_DEPTH;lod >= 0; lod--){
-        
-    // }
-    // lodRT[sector] = 0;
+    uint2 sectorLoc = id.xy;
+    [unroll]
+    for (uint lod = MAX_LOD_DEPTH; lod > -1; lod--){
+        uint sectorCount = GetSectorCount(lod);
+        uint2 nodeLodCount = sectorLoc / sectorCount;
+        uint nodeID = GetNodeID(nodeLodCount, lod);
+        NodeDescription desc = nodeInfoList[nodeID];
+        if (!desc.isLeaf){
+            lodRT[sectorLoc] = lod * 1.0 / MAX_LOD_DEPTH;
+            return;
+        }
+    }
+    lodRT[sectorLoc] = 0;
 }
 
 /*
@@ -133,6 +136,10 @@ float GetNodeExtent(uint lodLevel){
     return worldLodParams[lodLevel].z;
 }
 
+float GetSectorCount(uint lodLevel){
+    return worldLodParams[lodLevel].w;
+}
+
 float2 GetNodeCenterPos2(uint2 nodeLodCount, uint lodLevel){
     float nodeSize = GetNodeSize(lodLevel);
     float nodeCount = GetNodeCount(lodLevel);
@@ -167,11 +174,12 @@ RenderPatch GeneratePatch(uint3 nodeLodCount, uint2 offset){
     float2 nodeCenterPos = GetNodeCenterPos2(nodeLodCount.xy, lod);
 
     uint2 patchLodCount = nodeLodCount.xy * NODE_DIVIDE_PATCHES + offset;
-    float2 minMaxHeight = minMaxHeightRT.mips[lod][patchLodCount].rg * worldSize.y;
+    float2 minMaxHeight = minMaxHeightRT.mips[lod][patchLodCount].rg * worldSize.y + float2(-3.0, 3.0);
     RenderPatch patch;
     patch.worldPos = nodeCenterPos + patchSize * (offset - (NODE_DIVIDE_PATCHES - 1) * 0.5);
     patch.minMaxHeight = minMaxHeight;
     patch.lodLevel = lod;
+    patch.lodTrans = 0;
     return patch;
 }
 
