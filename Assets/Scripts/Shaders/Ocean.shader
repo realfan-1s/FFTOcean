@@ -75,13 +75,24 @@ Shader "Custom/Ocean"
 				half3(1, 0, 1), // 紫
 			};
 
+			inline void GetRealUV(inout float2 uv, float2 worldPos, float scale){
+				float2 startPos = worldPos - scale * float2(4, 4) + float2(4096, 4096);
+				float ratio = scale / 64;
+				while (startPos.x - 512 >= 0)
+					startPos.x -= 512;
+				while (startPos.y - 512 >= 0)
+					startPos.y -= 512;
+				uv *= ratio;
+				uv += startPos / 512;
+			}
+
 			v2f vert(input v){
 				v2f o;
 				RenderPatch patch = patchList[v.instanceID];
 				float scale = pow(2, patch.lodLevel);
 				v.vertex.xz *= scale;
 				v.vertex.xz += patch.worldPos;
-				// TODO:UV映射不正确
+				GetRealUV(v.uv, patch.worldPos, scale);
 				o.uv = TRANSFORM_TEX(v.uv, _Displace);
 				float4 displace = tex2Dlod(_Displace, float4(o.uv, 0, 0));
 				v.vertex += float4(displace.xyz, 0);

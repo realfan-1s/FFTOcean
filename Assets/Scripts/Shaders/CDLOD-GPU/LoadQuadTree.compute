@@ -174,7 +174,7 @@ RenderPatch GeneratePatch(uint3 nodeLodCount, uint2 offset){
     float2 nodeCenterPos = GetNodeCenterPos2(nodeLodCount.xy, lod);
 
     uint2 patchLodCount = nodeLodCount.xy * NODE_DIVIDE_PATCHES + offset;
-    float2 minMaxHeight = minMaxHeightRT.mips[lod][patchLodCount].rg * worldSize.y + float2(-3.0, 3.0);
+    float2 minMaxHeight = minMaxHeightRT.mips[lod][patchLodCount].rg * worldSize.y;
     RenderPatch patch;
     patch.worldPos = nodeCenterPos + patchSize * (offset - (NODE_DIVIDE_PATCHES - 1) * 0.5);
     patch.minMaxHeight = minMaxHeight;
