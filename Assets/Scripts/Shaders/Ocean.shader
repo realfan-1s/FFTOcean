@@ -78,10 +78,12 @@ Shader "Custom/Ocean"
 			inline void GetRealUV(inout float2 uv, float2 worldPos, float scale){
 				float2 startPos = worldPos - scale * float2(4, 4) + float2(4096, 4096);
 				float ratio = scale / 64;
-				while (startPos.x - 512 >= 0)
-					startPos.x -= 512;
-				while (startPos.y - 512 >= 0)
-					startPos.y -= 512;
+				startPos.x -= (uint)startPos.x / 512 * 512;
+				startPos.y -= (uint)startPos.y / 512 * 512;
+ 				// while (startPos.x - 512 >= 0)
+				// 	startPos.x -= 512;
+				// while (startPos.y - 512 >= 0)
+				// 	startPos.y -= 512;
 				uv *= ratio;
 				uv += startPos / 512;
 			}

@@ -84,7 +84,6 @@ public class TerrainBuilder : IDisposable
     #endregion
     #region "Compute shader kernel"
     private static readonly int kernelTraverseQuadTree = quadTreeCS.FindKernel("TraverseQuadTree");
-    private static readonly int kernelCreateLodMap = quadTreeCS.FindKernel("CreateLodMap");
     private static readonly int kernelCreatePatches = quadTreeCS.FindKernel("CreatePatches");
     #endregion
     #region "Compute Buffer"
@@ -166,7 +165,6 @@ public class TerrainBuilder : IDisposable
         tb = new TerrainBase(_minMaxHeightMaps, worldSize);
         BindShader(kernelTraverseQuadTree);
         BindShader(kernelCreatePatches);
-        BindShader(kernelCreateLodMap);
         InitWorldParams();
     }
     void InitWorldParams()
@@ -223,11 +221,6 @@ public class TerrainBuilder : IDisposable
             quadTreeCS.SetTexture(index, "minMaxHeightRT", tb.minMaxHeightRT);
             quadTreeCS.SetTexture(index, "lodRT", tb.lodRT);
         }
-        else if (index == kernelCreateLodMap)
-        {
-            quadTreeCS.SetTexture(index, "lodRT", tb.lodRT);
-            quadTreeCS.SetBuffer(index, "nodeInfoList", nodeInfoList);
-        }
     }
     public void Dispatch()
     {
@@ -277,8 +270,6 @@ public class TerrainBuilder : IDisposable
             consumeNodeList = appendNodeList;
             appendNodeList = temp;
         }
-        // TODO:生成LOD Map弥合接缝
-        commandBuffer.DispatchCompute(quadTreeCS, kernelCreateLodMap, 16, 16, 1);
 
         commandBuffer.CopyCounterValue(finalNodeList, _indirectArgs, 0);
         commandBuffer.DispatchCompute(quadTreeCS, kernelCreatePatches, _indirectArgs, 0);

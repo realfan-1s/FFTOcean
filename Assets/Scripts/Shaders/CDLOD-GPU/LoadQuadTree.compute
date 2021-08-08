@@ -1,5 +1,4 @@
 ﻿#pragma kernel TraverseQuadTree
-#pragma kernel CreateLodMap
 #pragma kernel CreatePatches
 
 #include "Struct.compute"
@@ -42,7 +41,6 @@ AppendStructuredBuffer<RenderPatch> culledPatchList;
 uint GetNodeID(uint2 nodeLodCount, uint lodLevel);
 float GetNodeSize(uint lodLevel);
 float GetNodeCount(uint lodLevel);
-float GetSectorCount(uint lodLevel);
 // float GetPatchExtent(uint lodLevel);
 bool EvaluateNode(uint2 nodeLodCount, uint lodLevel);
 float2 NodeCenterPos(uint2 nodeLodCount, uint lodLevel);
@@ -81,24 +79,6 @@ void TraverseQuadTree(uint3 id : SV_DispatchThreadID){
     nodeInfoList[nodeID] = nodeDesc;
 }
 
-// 生成lod map, 每个像素表示每个的LOD值
-[numthreads(8, 8, 1)]
-void CreateLodMap(uint3 id : SV_DispatchThreadID){
-    uint2 sectorLoc = id.xy;
-    [unroll]
-    for (uint lod = MAX_LOD_DEPTH; lod > -1; lod--){
-        uint sectorCount = GetSectorCount(lod);
-        uint2 nodeLodCount = sectorLoc / sectorCount;
-        uint nodeID = GetNodeID(nodeLodCount, lod);
-        NodeDescription desc = nodeInfoList[nodeID];
-        if (!desc.isLeaf){
-            lodRT[sectorLoc] = lod * 1.0 / MAX_LOD_DEPTH;
-            return;
-        }
-    }
-    lodRT[sectorLoc] = 0;
-}
-
 /*
 每一个线程对应一个patch，8*8个patches对应一个Node
 SV_DISPATCHTHREADID:线程在整个分发的线程组中的id
@@ -134,10 +114,6 @@ float GetNodeCount(uint lodLevel){
 
 float GetNodeExtent(uint lodLevel){
     return worldLodParams[lodLevel].z;
-}
-
-float GetSectorCount(uint lodLevel){
-    return worldLodParams[lodLevel].w;
 }
 
 float2 GetNodeCenterPos2(uint2 nodeLodCount, uint lodLevel){
