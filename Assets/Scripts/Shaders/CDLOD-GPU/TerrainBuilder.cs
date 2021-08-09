@@ -23,7 +23,6 @@ public class TerrainBase
     public const int MAX_LOD_DEPTH = 5;
     // MAX LOD下，世界由4x4个区块组成
     public const int MAX_LOD_COUNT = 4;
-    private RenderTexture[] quadTreeMaps;
     private static Mesh _plane;
     public static Mesh plane
     {
@@ -65,6 +64,7 @@ public class TerrainBuilder : IDisposable
         }
     }
     #region "Compute buffer nameID"
+    private static readonly int boundRedundanceID = Shader.PropertyToID("boundRedundance");
     private static readonly int controlID = Shader.PropertyToID("controllerC");
     private static readonly int camPosID = Shader.PropertyToID("cameraPos");
     private static readonly int worldSizeID = Shader.PropertyToID("worldSize");
@@ -94,7 +94,6 @@ public class TerrainBuilder : IDisposable
     private CommandBuffer commandBuffer = new CommandBuffer { name = "InfinityTerrain" };
     private Plane[] cameraFrustumPlane = new Plane[6];
     private Vector4[] cameraFrustumPlanesV4 = new Vector4[6];
-    private List<RenderTexture> quadMaps = new List<RenderTexture>();
     /// <summary>
     /// 分配buffer的大小
     /// </summary>
@@ -102,19 +101,36 @@ public class TerrainBuilder : IDisposable
     int maxLodSize;
     int lodCount;
     #region "节点评价系数C"
-    private Vector4 _controllerC = new Vector4(1, 0, 0, 0);
+    private float _controllerC = 1.0f;
     private bool changeC = true;
     public float conrollerC
     {
-        get => _controllerC.x;
+        get => _controllerC;
         set
         {
-            _controllerC.x = value;
+            _controllerC = value;
             changeC = true;
         }
     }
     #endregion
-    public TerrainBuilder(RenderTexture _minMaxHeightMaps, Vector3 _worldSize, int _maxBufferSize = 200, int _maxLodSize = 4, int _lodCount = 6)
+    #region "冗余长度"
+    private bool setRedundance = true;
+    private float _boundRedundance;
+    public float boundRedundance
+    {
+        get
+        {
+            return _boundRedundance;
+        }
+        set
+        {
+            _boundRedundance = value;
+            setRedundance = true;
+        }
+    }
+    #endregion
+    public TerrainBuilder(RenderTexture _minMaxHeightMaps, Vector3 _worldSize,
+    int _maxBufferSize = 200, int _maxLodSize = 4, int _lodCount = 6)
     {
         maxLodSize = _maxLodSize;
         lodCount = _lodCount;
@@ -126,14 +142,11 @@ public class TerrainBuilder : IDisposable
         InitMaxLodData();
         nodeInfoList = new ComputeBuffer((int)TerrainBase.MAX_NODE_ID, 4);
         finalNodeList = new ComputeBuffer(maxBufferSize, 12, ComputeBufferType.Append);
-        _culledPatchList = new ComputeBuffer(maxBufferSize * 64, 36, ComputeBufferType.Append);
+        _culledPatchList = new ComputeBuffer(maxBufferSize * 64, 20, ComputeBufferType.Append);
         _indirectArgs = new ComputeBuffer(3, 4, ComputeBufferType.IndirectArguments);
         _indirectArgs.SetData(new uint[] { 1, 1, 1 });
         _patchIndirectArgs = new ComputeBuffer(5, 4, ComputeBufferType.IndirectArguments);
         _patchIndirectArgs.SetData(new uint[] { TerrainBase.plane.GetIndexCount(0), 0, 0, 0, 0 });
-
-        uint[] data = new uint[5];
-        _patchIndirectArgs.GetData(data);
 
         InitParams(_minMaxHeightMaps, _worldSize);
     }
@@ -235,7 +248,12 @@ public class TerrainBuilder : IDisposable
         if (changeC)
         {
             changeC = false;
-            commandBuffer.SetComputeVectorParam(quadTreeCS, controlID, _controllerC);
+            commandBuffer.SetComputeFloatParam(quadTreeCS, controlID, _controllerC);
+        }
+        if (setRedundance)
+        {
+            setRedundance = false;
+            commandBuffer.SetComputeFloatParam(quadTreeCS, boundRedundanceID, boundRedundance);
         }
         commandBuffer.SetComputeVectorParam(quadTreeCS, camPosID, cam.transform.position);
         commandBuffer.SetComputeVectorParam(quadTreeCS, worldSizeID, tb.worldSize);

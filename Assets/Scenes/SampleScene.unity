@@ -326,9 +326,9 @@ Camera:
     y: 0
     width: 1
     height: 1
-  near clip plane: 0.01
+  near clip plane: 0.1
   far clip plane: 2000
-  field of view: 75
+  field of view: 60
   orthographic: 0
   orthographic size: 5
   m_Depth: -1
@@ -393,10 +393,10 @@ MonoBehaviour:
   fftRatio: 9
   A: 50
   windAndSeed: {x: 1, y: 2, z: 0, w: 0}
-  windScale: 30
-  lambda: -2
-  timeScale: 2
-  heightScale: 80
+  windScale: 35
+  lambda: -9
+  timeScale: 2.5
+  heightScale: 100
   bubbleScale: 15
   bubbleThreshold: 0.9
   M: 12
@@ -412,7 +412,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1286073891}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 40, z: 0}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children:
   - {fileID: 53232039}
@@ -432,6 +432,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   nodeEvaluationDist: 1.4
+  boundRedundance: 40
   patchDebug: 0
 --- !u!1 &1490815125
 GameObject:

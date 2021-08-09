@@ -39,8 +39,6 @@ Shader "Custom/Ocean"
 			struct input{
 				float4 vertex : POSITION;
 				float2 uv : TEXCOORD0;
-				uint instanceID : SV_INSTANCEID;
-				uint vertexID : SV_VERTEXID;
 			};
 
 			struct v2f{
@@ -83,9 +81,9 @@ Shader "Custom/Ocean"
 				uv += startPos / 512;
 			}
 
-			v2f vert(input v){
+			v2f vert(input v, uint instanceID : SV_INSTANCEID){
 				v2f o;
-				RenderPatch patch = patchList[v.instanceID];
+				RenderPatch patch = patchList[instanceID];
 				float scale = pow(2, patch.lodLevel);
 				v.vertex.xz *= scale;
 				v.vertex.xz += patch.worldPos;

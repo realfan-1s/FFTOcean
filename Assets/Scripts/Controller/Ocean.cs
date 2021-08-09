@@ -248,9 +248,9 @@ public class Ocean : MonoBehaviour
         oceanShader.SetTexture(kernel, "inputRT", input);
         oceanShader.SetTexture(kernel, "outputRT", outputRT);
         oceanShader.Dispatch(kernel, fftSize / 8, fftSize / 8, 1);
-        var rtTemp = input;
+        var temp = input;
         input = outputRT;
-        outputRT = rtTemp;
+        outputRT = temp;
     }
     public RenderTexture GetHeightRT()
     {
@@ -333,9 +333,10 @@ public class Ocean : MonoBehaviour
     }
     public static RenderTexture CreateRT(int size)
     {
-        var desc = new RenderTextureDescriptor(size, size, RenderTextureFormat.R8);
+        var desc = new RenderTextureDescriptor(size, size, RenderTextureFormat.RG32);
         desc.enableRandomWrite = true;
         desc.autoGenerateMips = true;
+        desc.useMipMap = true;
         var rt = new RenderTexture(desc);
         rt.filterMode = FilterMode.Point;
         return rt;
@@ -346,21 +347,6 @@ public class Ocean : MonoBehaviour
         rt.enableRandomWrite = true;
         rt.autoGenerateMips = false;
         rt.Create();
-        return rt;
-    }
-    public static RenderTexture CreateRT(RenderTexture[] mipmaps, RenderTextureFormat format)
-    {
-        var mip0 = mipmaps[0];
-        RenderTextureDescriptor desc = new RenderTextureDescriptor(mip0.width, mip0.width, format);
-        desc.autoGenerateMips = true;
-        desc.useMipMap = true;
-        RenderTexture rt = new RenderTexture(desc);
-        rt.filterMode = mip0.filterMode;
-        rt.Create();
-        for (int i = 0; i < mipmaps.Length; i++)
-        {
-            Graphics.CopyTexture(mipmaps[i], 0, 0, rt, 0, i);
-        }
         return rt;
     }
 }

@@ -27,18 +27,14 @@ public class MinMaxTextureMgr
     private RenderTexture heightRT;
     /* ========== 生成minMaxHeightRT ========== */
     private int patchMapSize;
-    private int kernelPatchMinMaxHeight;
+    private static int kernelPatchMinMaxHeight = minMaxCS.FindKernel("PatchMinMaxHeight");
     private bool isInit = false;
     private RenderTexture minMaxHeightRT;
-    public MinMaxTextureMgr()
-    {
-        kernelPatchMinMaxHeight = minMaxCS.FindKernel("PatchMinMaxHeight");
-    }
     public void Generate(RenderTexture _heightRT, int _patchSize)
     {
         heightRT = _heightRT;
         patchMapSize = _patchSize;
-        minMaxHeightRT = Ocean.CreateRT(patchMapSize, RenderTextureFormat.RG32);
+        minMaxHeightRT = Ocean.CreateRT(patchMapSize);
         isInit = true;
     }
     public void RefreshInfos()
@@ -62,7 +58,7 @@ public class MinMaxTextureMgr
         groupX = (int)(size / threadX);
         groupY = (int)(size / threadY);
     }
-    public RenderTexture GetHeightMipMaps()
+    public RenderTexture GetMinMaxHeightRT()
     {
         return minMaxHeightRT;
     }

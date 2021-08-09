@@ -22,6 +22,7 @@ uint mipSize;
 uniform uint curLOD;
 uniform float3 cameraPos;
 uniform float3 worldSize;// 世界大小
+uniform float boundRedundance; // 包围盒留出冗余
 uniform float controllerC;// 用户可控制系数
 /*
 记录每个LOD级别的(nodeSize, patchExtent, nodeCount)
@@ -47,7 +48,7 @@ float3 GetNodeCenterPos(uint2 nodeLodCount, uint lodLevel);
 RenderPatch GeneratePatch(uint3 nodeLodCount, uint2 offset);
 bool IsOutSidePlane(float4 plane, float3 pos);
 bool IsAABBOutOfPlane(float4 plane, float3 boundMin, float boundMax);
-bool FrustCull(float4 plane[6], Bounds bound);
+bool FrustmCull(float4 plane[6], Bounds bound);
 Bounds GetPatchBounds(RenderPatch patch);
 
 /*
@@ -69,11 +70,11 @@ void TraverseQuadTree(uint3 id : SV_DispatchThreadID){
         appendNodeList.Append(nodeLodCount * 2 + uint2(1, 0));
         appendNodeList.Append(nodeLodCount * 2 + uint2(0, 1));
         appendNodeList.Append(nodeLodCount * 2 + uint2(1, 1));
-        nodeDesc.isLeaf = 1;
+        nodeDesc.isLeaf = 0;
     } else {
         // 不划分四叉树，直接加入到最终节点中
         appendFinalNodeList.Append(uint3(nodeLodCount, curLOD));
-        nodeDesc.isLeaf = 0;
+        nodeDesc.isLeaf = 1;
     }
     nodeInfoList[nodeID] = nodeDesc;
 }
@@ -91,13 +92,13 @@ void CreatePatches(uint3 id : SV_DISPATCHTHREADID, uint3 groupId : SV_GROUPID, u
     uint2 patchOffset = groupThreadId.xy;
     // 生成patch
     RenderPatch patch = GeneratePatch(nodeLodCount, patchOffset);
-
     Bounds bound = GetPatchBounds(patch);
-    if (FrustCull(cameraFrustumPlanes, bound))
+    if (FrustmCull(cameraFrustumPlanes, bound))
         return;
     culledPatchList.Append(patch);
 } 
 
+// TODO: Hierarchical Z-Buffering Occlusion Culling
 // 在GPU中替代unordered_map，建立一个uint3->uint的映射，将uint作为下标数组索引NodeDescriptBuffer
 uint GetNodeID(uint2 nodeLodCount, uint lodLevel){
     return GetNodeCount(lodLevel) * nodeLodCount.y + nodeLodCount.x + offsetOfNodeID[lodLevel];
@@ -135,7 +136,7 @@ float3 GetNodeCenterPos(uint2 nodeLodCount, uint lodLevel){
 */
 bool EvaluateNode(uint2 nodeLodCount, uint lodLevel){
     float cameraDist = distance(cameraPos, GetNodeCenterPos(nodeLodCount, lodLevel));
-    float f = cameraDist / (GetNodeSize(lodLevel) * controllerC);
+    float f = 1 * cameraDist / (GetNodeSize(lodLevel) * controllerC);
     if (f < 1){
         return true;
     }
@@ -149,12 +150,11 @@ RenderPatch GeneratePatch(uint3 nodeLodCount, uint2 offset){
     float2 nodeCenterPos = GetNodeCenterPos2(nodeLodCount.xy, lod);
 
     uint2 patchLodCount = nodeLodCount.xy * NODE_DIVIDE_PATCHES + offset;
-    float2 minMaxHeight = minMaxHeightRT.mips[lod][patchLodCount].rg * worldSize.y;
+    float2 minMaxHeight = minMaxHeightRT.mips[lod][patchLodCount].xy * worldSize.y + float2(-boundRedundance, boundRedundance);
     RenderPatch patch;
     patch.worldPos = nodeCenterPos + patchSize * (offset - (NODE_DIVIDE_PATCHES - 1) * 0.5);
     patch.minMaxHeight = minMaxHeight;
     patch.lodLevel = lod;
-    patch.lodTrans = 0;
     return patch;
 }
 
@@ -167,6 +167,7 @@ Far Cry5中有三种剔除，包括视锥体剔除、遮挡剔除、背面剔除
 bool IsOutSidePlane(float4 plane, float3 pos){
     return (dot(plane.xyz, pos) + plane.w) < 0;
 }
+
 // 只要存在一个平面，使得整个平面的八个顶点都在平面的外侧，整个物体就在平面之外
 bool IsAABBOutOfPlane(float4 plane, float3 minPos, float3 maxPos){
     return IsOutSidePlane(plane, minPos) &&
@@ -178,7 +179,8 @@ bool IsAABBOutOfPlane(float4 plane, float3 minPos, float3 maxPos){
     IsOutSidePlane(plane, float3(maxPos.xy, minPos.z)) &&
     IsOutSidePlane(plane, float3(minPos.x, maxPos.y, minPos.z));
 }
-bool FrustCull(float4 plane[6], Bounds bound){
+
+bool FrustmCull(float4 plane[6], Bounds bound){
     return IsAABBOutOfPlane(plane[0], bound.minPos, bound.maxPos) ||
     IsAABBOutOfPlane(plane[1], bound.minPos, bound.maxPos) ||
     IsAABBOutOfPlane(plane[2], bound.minPos, bound.maxPos) ||
@@ -186,6 +188,7 @@ bool FrustCull(float4 plane[6], Bounds bound){
     IsAABBOutOfPlane(plane[4], bound.minPos, bound.maxPos) ||
     IsAABBOutOfPlane(plane[5], bound.minPos, bound.maxPos);
 }
+
 Bounds GetPatchBounds(RenderPatch patch){
     float extent = GetNodeExtent(patch.lodLevel);
     Bounds bound;
@@ -198,4 +201,3 @@ Bounds GetPatchBounds(RenderPatch patch){
     bound.maxPos = boundMax;
     return bound;
 }
-// TODO: Hierarchical Z-Buffering Occlusion Culling

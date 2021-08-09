@@ -6,7 +6,7 @@ RWTexture2D<float4> minMaxHeightRT;
 
 [numthreads(8, 8, 1)]
 void PatchMinMaxHeight(uint3 id : SV_DISPATCHTHREADID){
-    float h1 = heightRT[id.xy].y;
+    float h1 = heightRT[id.xy + uint2(0, 0)].y;
     float h2 = heightRT[id.xy + uint2(1, 0)].y;
     float h3 = heightRT[id.xy + uint2(0, 1)].y;
     float h4 = heightRT[id.xy + uint2(1, 1)].y;

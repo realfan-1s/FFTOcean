@@ -53,11 +53,9 @@ void CreateHeightSpectrum(uint3 id : SV_DISPATCHTHREADID){
     float2 k = float2(2.0 * PI * id.x / textureSize - PI, 2.0 * PI * id.y / textureSize - PI);
     float2 gaussian = gaussianRT[id.xy].xy;
     float2 hide0 = gaussian * sqrt(abs(Phillips(k) * DonelanBannerDirectionalSpreading(k)) / 2.0);
-
     // 计算hide0(-k)的共轭复数
     float2 hide0Conj = gaussian * sqrt(abs(Phillips(-k) * DonelanBannerDirectionalSpreading(-k)) / 2.0);
     hide0Conj.y *= -1;
-
     // 欧拉公式将对数幂转化为三角函数
     float omega = Dispersion(k) * time;
     float c = cos(omega);
