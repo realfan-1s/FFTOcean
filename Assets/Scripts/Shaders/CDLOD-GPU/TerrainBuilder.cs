@@ -44,16 +44,6 @@ public class TerrainBase
             return _minMaxHeightRT;
         }
     }
-    private RenderTexture _lodRT;
-    public RenderTexture lodRT
-    {
-        get
-        {
-            if (_lodRT == null)
-                _lodRT = Ocean.CreateRT(128);
-            return _lodRT;
-        }
-    }
     public TerrainBase(RenderTexture _minMaxHeightMaps, Vector3 _worldSize)
     {
         _minMaxHeightRT = _minMaxHeightMaps;
@@ -101,7 +91,7 @@ public class TerrainBuilder : IDisposable
     private ComputeBuffer _patchIndirectArgs;
     public ComputeBuffer patchIndirectArgs { get => _patchIndirectArgs; }
     #endregion
-    private CommandBuffer commandBuffer = new CommandBuffer();
+    private CommandBuffer commandBuffer = new CommandBuffer { name = "InfinityTerrain" };
     private Plane[] cameraFrustumPlane = new Plane[6];
     private Vector4[] cameraFrustumPlanesV4 = new Vector4[6];
     private List<RenderTexture> quadMaps = new List<RenderTexture>();
@@ -128,7 +118,6 @@ public class TerrainBuilder : IDisposable
     {
         maxLodSize = _maxLodSize;
         lodCount = _lodCount;
-        commandBuffer.name = "InfinityTerrain";
         maxBufferSize = _maxBufferSize;
         // 构造函数第一个参数接收输出buffer的长度，第二个参数代表每个元素的长度，第三个参数表示compute buffer的类型
         consumeNodeList = new ComputeBuffer(50, 8, ComputeBufferType.Append);
@@ -219,7 +208,6 @@ public class TerrainBuilder : IDisposable
             quadTreeCS.SetBuffer(index, "culledPatchList", _culledPatchList);
             quadTreeCS.SetBuffer(index, "finalNodeList", finalNodeList);
             quadTreeCS.SetTexture(index, "minMaxHeightRT", tb.minMaxHeightRT);
-            quadTreeCS.SetTexture(index, "lodRT", tb.lodRT);
         }
     }
     public void Dispatch()
@@ -232,6 +220,7 @@ public class TerrainBuilder : IDisposable
         appendNodeList.SetCounterValue(0);
         _culledPatchList.SetCounterValue(0);
         finalNodeList.SetCounterValue(0);
+        commandBuffer.SetExecutionFlags(CommandBufferExecutionFlags.AsyncCompute);
 
         GeometryUtility.CalculateFrustumPlanes(cam, cameraFrustumPlane);
         for (int i = 0; i < cameraFrustumPlane.Length; ++i)
@@ -274,6 +263,6 @@ public class TerrainBuilder : IDisposable
         commandBuffer.CopyCounterValue(finalNodeList, _indirectArgs, 0);
         commandBuffer.DispatchCompute(quadTreeCS, kernelCreatePatches, _indirectArgs, 0);
         commandBuffer.CopyCounterValue(_culledPatchList, _patchIndirectArgs, 4);
-        Graphics.ExecuteCommandBuffer(commandBuffer);
+        Graphics.ExecuteCommandBufferAsync(commandBuffer, ComputeQueueType.Background);
     }
 }

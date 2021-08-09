@@ -38,7 +38,7 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 705507994}
-  m_IndirectSpecularColor: {r: 0.70043206, g: 0.7788845, b: 0.76724935, a: 1}
+  m_IndirectSpecularColor: {r: 0.70184445, g: 0.780185, b: 0.7678746, a: 1}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -326,7 +326,7 @@ Camera:
     y: 0
     width: 1
     height: 1
-  near clip plane: 0.3
+  near clip plane: 0.01
   far clip plane: 2000
   field of view: 75
   orthographic: 0
@@ -394,9 +394,9 @@ MonoBehaviour:
   A: 50
   windAndSeed: {x: 1, y: 2, z: 0, w: 0}
   windScale: 30
-  lambda: 9
+  lambda: -2
   timeScale: 2
-  heightScale: 100
+  heightScale: 80
   bubbleScale: 15
   bubbleThreshold: 0.9
   M: 12
@@ -433,7 +433,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   nodeEvaluationDist: 1.4
   patchDebug: 0
-  test: {fileID: 2100000, guid: 3b8391fb372be3f4ab6df2cb8e3459df, type: 2}
 --- !u!1 &1490815125
 GameObject:
   m_ObjectHideFlags: 0

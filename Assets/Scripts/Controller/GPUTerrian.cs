@@ -9,7 +9,6 @@ public class GPUTerrian : MonoBehaviour
     public float nodeEvaluationDist = 1.4f;
     public bool patchDebug = false;
     private int meshSize = 8192;
-    public Material test;
     private void Awake()
     {
         ocean = transform.GetComponent<Ocean>();
@@ -25,7 +24,6 @@ public class GPUTerrian : MonoBehaviour
         ocean.oceanShader.SetFloats("worldSize", new float[3] { meshSize, ocean.heightScale, meshSize });
 
         terrain.conrollerC = this.nodeEvaluationDist;
-        test.SetTexture("_MainTex", terrain.tb.lodRT);
     }
 
     // Update is called once per frame

@@ -26,8 +26,7 @@ Shader "Custom/Ocean"
 		LOD 200
 		pass {
 			CGPROGRAM
-			#pragma target 4.0
-			#pragma multi_compile_fwdbase
+			#pragma target 4.5
 			#pragma shader_feature USE_PATCH_DEBUG
 			#pragma vertex vert
 			#pragma fragment frag
@@ -80,10 +79,6 @@ Shader "Custom/Ocean"
 				float ratio = scale / 64;
 				startPos.x -= (uint)startPos.x / 512 * 512;
 				startPos.y -= (uint)startPos.y / 512 * 512;
- 				// while (startPos.x - 512 >= 0)
-				// 	startPos.x -= 512;
-				// while (startPos.y - 512 >= 0)
-				// 	startPos.y -= 512;
 				uv *= ratio;
 				uv += startPos / 512;
 			}
