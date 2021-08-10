@@ -48,7 +48,7 @@ public class Ocean : MonoBehaviour
     [Header("海洋材质")]
     public Material oceanMat;
     // public Material displaceXMat;
-    public Material heightMat;
+    // public Material heightMat;
     // public Material displaceZMat;
     // public Material displaceMat;
     // public Material normalMat;
@@ -237,7 +237,7 @@ public class Ocean : MonoBehaviour
         oceanMat.SetTexture("_Bubbles", bubbleRT);
 
         // displaceXMat.SetTexture("_MainTex", displaceXSpectrumRT);
-        heightMat.SetTexture("_MainTex", heightSpectrumRT);
+        // heightMat.SetTexture("_MainTex", heightSpectrumRT);
         // displaceZMat.SetTexture("_MainTex", displaceZSpectrumRT);
         // displaceMat.SetTexture("_MainTex", displaceRT);
         // normalMat.SetTexture("_MainTex", normalRT);

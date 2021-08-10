@@ -214,7 +214,7 @@ Light:
   m_Type: 1
   m_Shape: 0
   m_Color: {r: 1, g: 0.95686275, b: 0.8392157, a: 1}
-  m_Intensity: 0.4
+  m_Intensity: 1
   m_Range: 10
   m_SpotAngle: 30
   m_InnerSpotAngle: 21.80208
@@ -393,17 +393,16 @@ MonoBehaviour:
   fftRatio: 9
   A: 50
   windAndSeed: {x: 1, y: 2, z: 0, w: 0}
-  windScale: 35
-  lambda: -9
-  timeScale: 2.5
+  windScale: 30
+  lambda: -7
+  timeScale: 2
   heightScale: 100
   bubbleScale: 15
-  bubbleThreshold: 0.9
+  bubbleThreshold: 0.94
   M: 12
   horizontalOrVertical: 1
   oceanShader: {fileID: 7200000, guid: e63c377f5e9ce044f816bd3896132f6d, type: 3}
   oceanMat: {fileID: 2100000, guid: 723b24f21a26587489aec0181b957437, type: 2}
-  heightMat: {fileID: 2100000, guid: 7f774be8fa2a06d4196f505f339bc746, type: 2}
 --- !u!4 &1286073893
 Transform:
   m_ObjectHideFlags: 0
@@ -432,7 +431,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   nodeEvaluationDist: 1.4
-  boundRedundance: 40
+  boundRedundance: 45
   patchDebug: 0
 --- !u!1 &1490815125
 GameObject:

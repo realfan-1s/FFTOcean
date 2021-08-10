@@ -10,12 +10,14 @@ Shader "Custom/Ocean"
 		_DeepColor("DeepColor", Color) = (1, 1, 1, 1)
 		_BubbleColor ("BubbleColor", Color) = (1, 1, 1, 1)
 		_SpecularColor("SpecularColor", Color) = (1, 1, 1, 1)
-		/* phong shading光照参数
-		_Gloss ("Gloss", Range(8,256)) = 20
-		*/
 		_Metalness("Metalness", Range(0, 1)) = 0.5
 		_Roughness("roughness", Range(0, 1)) = 0.5
-		_SubSurfaceStrength("SubSurfaceStrength", Range(0, 1)) = 0.1
+		[Header(SubSurface Scattering)]
+		_SubSurfaceColor("SubSurface Color", Color) = (1, 1, 1, 1)
+		_ShadowFactor("Shadow Factor", Range(0, 1.0)) = 0.2
+		_SubSurfacePower("SubSurface Power", Range(1.0, 2.0)) = 1.7
+		_SubSurfaceScale("SurSurface Scale", Range(0.0, 1.0)) = 5
+		_Gloss("Gloss", Range(5.0, 20)) = 5.5
 		[HideInInspector]_Displace ("_Displace", 2D) = "white" {}
 		[HideInInspector]_Normal("_Normal", 2D) = "white" {}
 		[HideInInspector]_Bubbles("_Bubbles", 2D) = "White" {}
@@ -58,10 +60,13 @@ Shader "Custom/Ocean"
 			sampler2D _Normal;
 			sampler2D _Bubbles;
 			float4 _Displace_ST;
-			// float _Gloss;
+			float _Gloss;
 			fixed _Metalness;
 			fixed _Roughness;
-			fixed _SubSurfaceStrength;
+			float _ShadowFactor;
+			float _SubSurfacePower;
+			float _SubSurfaceScale;
+			fixed4 _SubSurfaceColor;
 
 			static half3 quadTreeDebugs[6] = {
 				half3(0, 1, 0), // 绿
@@ -133,17 +138,21 @@ Shader "Custom/Ocean"
 				return 0.5 / (lambdaL + lambdaV + 1e-5f);
 			}
 
-			inline half SchlickPhaseFunc(fixed3 lightDir, fixed3 normalDir, fixed3 viewDir, fixed roughness){
-				return saturate(pow(dot(viewDir, -(lightDir + 0.522 * normalDir)), 5.0)) * roughness;
+			/*
+			假设光更有可能在波浪的一侧被水散射与透射,基于FFT模拟产生的顶点偏移，为波的侧面生成波峰mask
+			根据视角，光源方向和波峰mask的组合，将深水颜色和次表面散射水体颜色之间进行混合，得到次表面散射颜色。
+			将位移值（Displacement）除以波长，并用此缩放后的新的位移值计算得出次表面散射项强度。
+			*/
+			inline half3 CalSSS(fixed3 lightDir, fixed3 normalDir, fixed3 viewDir, fixed4 sssCol,
+			float waveHeight, float shadowFactor, float power, float scale, float emssionBase){
+				half lightStrength = sqrt(saturate(lightDir.y));
+				float fltDot = pow(saturate(dot(normalDir, -lightDir)) + saturate(dot(viewDir, lightDir)), power);
+				float fltRatio = fltDot * lightStrength * shadowFactor * emssionBase;
+				return sssCol * (waveHeight * 0.6 + fltRatio);
 			}
 
-			// TODO: 重写光照模型
+			// TODO:重写着模型
 			half4 frag(v2f o) : SV_TARGET{
-				// 光照衰减的计算，参见https://zhuanlan.zhihu.com/p/31805436
-				// float3 lightCoord = mul(unity_WorldToLight, float4(o.worldPos, 1)).xyz;
-				// fixed atten = tex2D(_LightTexture0, dot(lightCoord, lightCoord).rr).UNITY_ATTEN_CHANEL;
-				// UNITY_LIGHT_ATTUATION(atten, o, o.worldPos);
-
 				fixed3 normalDir = UnityObjectToWorldNormal(tex2D(_Normal, o.uv).rgb);
 				fixed bubbles = tex2D(_Bubbles, o.uv).r;
 				fixed3 lightDir = normalize(UnityWorldSpaceLightDir(o.worldPos));
@@ -166,11 +175,6 @@ Shader "Custom/Ocean"
 				fixed3 albedo = lerp(oceanColor, bubbleColor, bubbles);
 				half oneMinusReflective = 1 - max(max(albedo.r, albedo.g), albedo.b);
 
-				// 暂时先用phong shading凑活一下
-				// fixed fresnel = FresnelSchlick(ldoth);
-				// fixed3 specualr = _LightColor0.rgb * _SpecularColor.rgb * pow(saturate(max(0, ndoth)), _Gloss);
-				// fixed3 diffuse = lerp(oceanColor, bubbleColor, bubbles);
-				// fixed3 col = UNITY_LIGHTMODEL_AMBIENT.rgb + specualr + lerp(diffuse, sky, fresnel);
 				fixed r2 = _Roughness * _Roughness;
 				half V = GGXVisibilityTerm(r2 , ndotv, ndotl);
 				half D = GGXTerm(r2, ndoth);
@@ -185,8 +189,9 @@ Shader "Custom/Ocean"
 				half grazingTerm = saturate(2 - _Roughness - oneMinusReflective);
 				half surfaceReduction = 1.0 / (r2 + 1.0);
 				half3 indirectiveSpceular = surfaceReduction * envMap.rgb * FresnelLerp(F0, grazingTerm, ndotv);
-				// 水体次表面散射, 参考https://www.alanzucconi.com/2017/08/30/fast-subsurface-scattering-1/
-				half3 SubSurfaceScatter = envMap.rgb * SchlickPhaseFunc(lightDir, normalDir, viewDir, _SubSurfaceStrength);
+				// 水体次表面散射, https://zhuanlan.zhihu.com/p/95917609
+				half3 SubSurfaceScatter = CalSSS(lightDir, normalDir, viewDir, _SubSurfaceColor,
+				tex2D(_Displace, o.uv).g, _ShadowFactor, _SubSurfacePower, _SubSurfaceScale, _Gloss);
 
 				half3 col = UNITY_LIGHTMODEL_AMBIENT.rgb + UNITY_PI * (specualr + diffuse) * ndotl + indirectiveSpceular + SubSurfaceScatter;
 				#if USE_PATCH_DEBUG
