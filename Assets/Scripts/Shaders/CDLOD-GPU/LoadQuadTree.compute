@@ -58,7 +58,7 @@ Bounds GetPatchBounds(RenderPatch patch);
 4. 如果决定分割，那么将分割后的4个节点加入AppendNodeList,否则将当前节点加入AppendFinalNodeList
 5. Dispatch结束, 将当前PassLOD减1，互换ConsumeNodeList和AppendNodeList，回到2执行下一个Pass
 */
-[numthreads(4, 4, 1)]
+[numthreads(1, 1, 1)]
 void TraverseQuadTree(uint3 id : SV_DispatchThreadID){
     uint2 nodeLodCount = consumeNodeList.Consume();
     uint nodeID = GetNodeID(nodeLodCount, curLOD);

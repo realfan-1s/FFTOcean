@@ -258,7 +258,7 @@ public class TerrainBuilder : IDisposable
         commandBuffer.SetComputeVectorParam(quadTreeCS, camPosID, cam.transform.position);
         commandBuffer.SetComputeVectorParam(quadTreeCS, worldSizeID, tb.worldSize);
 
-        // commandBuffer.CopyCounterValue(maxNodeList, _indirectArgs, 0);
+        commandBuffer.CopyCounterValue(maxNodeList, _indirectArgs, 0);
         for (int lod = TerrainBase.MAX_LOD_DEPTH; lod > -1; --lod)
         {
             commandBuffer.SetComputeIntParam(quadTreeCS, curLodID, lod);
@@ -271,13 +271,13 @@ public class TerrainBuilder : IDisposable
                 commandBuffer.SetComputeBufferParam(quadTreeCS, kernelTraverseQuadTree, consumeNodeListID, consumeNodeList);
             }
             commandBuffer.SetComputeBufferParam(quadTreeCS, kernelTraverseQuadTree, appendNodeListID, appendNodeList);
-            commandBuffer.DispatchCompute(quadTreeCS, kernelTraverseQuadTree, 1, 1, 1);
+            commandBuffer.DispatchCompute(quadTreeCS, kernelTraverseQuadTree, _indirectArgs, 0);
             commandBuffer.CopyCounterValue(appendNodeList, _indirectArgs, 0);
+
             var temp = consumeNodeList;
             consumeNodeList = appendNodeList;
             appendNodeList = temp;
         }
-
         commandBuffer.CopyCounterValue(finalNodeList, _indirectArgs, 0);
         commandBuffer.DispatchCompute(quadTreeCS, kernelCreatePatches, _indirectArgs, 0);
         commandBuffer.CopyCounterValue(_culledPatchList, _patchIndirectArgs, 4);

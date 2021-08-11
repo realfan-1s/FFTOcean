@@ -191,7 +191,7 @@ Shader "Custom/Ocean"
 				half3 indirectiveSpceular = surfaceReduction * envMap.rgb * FresnelLerp(F0, grazingTerm, ndotv);
 				// 水体次表面散射, https://zhuanlan.zhihu.com/p/95917609
 				half3 SubSurfaceScatter = CalSSS(lightDir, normalDir, viewDir, _SubSurfaceColor,
-				tex2D(_Displace, o.uv).g, _ShadowFactor, _SubSurfacePower, _SubSurfaceScale, _Gloss);
+				tex2D(_Displace, o.uv).g, _ShadowFactor, _SubSurfacePower, _SubSurfaceScale, _Gloss) * 0.01;
 
 				half3 col = UNITY_LIGHTMODEL_AMBIENT.rgb + UNITY_PI * (specualr + diffuse) * ndotl + indirectiveSpceular + SubSurfaceScatter;
 				#if USE_PATCH_DEBUG

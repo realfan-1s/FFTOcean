@@ -17,9 +17,6 @@ public class Ocean : MonoBehaviour
     public float heightScale = 1.0f;
     public float bubbleScale = 1.0f;
     public float bubbleThreshold = 1.0f;
-    [Range(0, 12)]
-    public int M = 12; // 执行FFT的次数
-    public bool horizontalOrVertical = true; // 控制横向FFT(false)还是纵向FFT(true)
     #endregion
 
     private float time;
@@ -163,12 +160,6 @@ public class Ocean : MonoBehaviour
         oceanShader.SetTexture(kernelCreateDisplaceSpectrum, "displaceZSpectrumRT", displaceZSpectrumRT);
         oceanShader.Dispatch(kernelCreateDisplaceSpectrum, fftSize / 8, fftSize / 8, 1);
 
-        if (M == 0)
-        {
-            SetMaterial();
-            return;
-        }
-
         // 横向FFT
         for (int i = 1; i <= fftRatio; ++i)
         {
@@ -185,11 +176,6 @@ public class Ocean : MonoBehaviour
                 FFT(kernelFFTHorizontalEnd, ref heightSpectrumRT);
                 FFT(kernelFFTHorizontalEnd, ref displaceXSpectrumRT);
                 FFT(kernelFFTHorizontalEnd, ref displaceZSpectrumRT);
-            }
-            if (horizontalOrVertical && M == i)
-            {
-                SetMaterial();
-                return;
             }
         }
         // 纵向FFT
@@ -208,11 +194,6 @@ public class Ocean : MonoBehaviour
                 FFT(kernelFFTVerticalEnd, ref heightSpectrumRT);
                 FFT(kernelFFTVerticalEnd, ref displaceXSpectrumRT);
                 FFT(kernelFFTVerticalEnd, ref displaceZSpectrumRT);
-            }
-            if (!horizontalOrVertical && M == i)
-            {
-                SetMaterial();
-                return;
             }
         }
 

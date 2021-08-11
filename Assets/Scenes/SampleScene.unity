@@ -392,15 +392,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   fftRatio: 9
   A: 50
-  windAndSeed: {x: 1, y: 2, z: 0, w: 0}
+  windAndSeed: {x: 25, y: 0, z: 0, w: 0}
   windScale: 30
-  lambda: -7
+  lambda: 7
   timeScale: 2
-  heightScale: 100
+  heightScale: 80
   bubbleScale: 15
   bubbleThreshold: 0.94
-  M: 12
-  horizontalOrVertical: 1
   oceanShader: {fileID: 7200000, guid: e63c377f5e9ce044f816bd3896132f6d, type: 3}
   oceanMat: {fileID: 2100000, guid: 723b24f21a26587489aec0181b957437, type: 2}
 --- !u!4 &1286073893
@@ -431,7 +429,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   nodeEvaluationDist: 1.4
-  boundRedundance: 45
+  boundRedundance: 25
   patchDebug: 0
 --- !u!1 &1490815125
 GameObject:

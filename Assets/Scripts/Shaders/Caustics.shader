@@ -54,7 +54,7 @@
                 return o;
             }
 
-            inline float4 mainImage (float2 p){
+            inline float4 CalcCaustics (float2 p){
                 float3x3 mat = float3x3(-2, -1, 2,
                                         3, -2, 1,
                                         1, 2, 2);
@@ -79,7 +79,7 @@
                 fixed3 halfDir = normalize(i.lightDir + i.viewDir);
                 fixed3 specular = _Specular * pow(max(0, dot(halfDir, normalDir)), _Gloss);
                 float2 fragCoord = (i.screenPos.xy / i.screenPos.w) * _ScreenParams.xy;
-                return fixed4(specular + diffuse + ambient + mainImage(fragCoord).xyz, 1);
+                return fixed4(specular + diffuse + ambient + CalcCaustics(fragCoord).xyz, 1);
             }
             ENDCG
         }
