@@ -7,7 +7,7 @@ public class GPUTerrian : MonoBehaviour
     private TerrainBuilder terrain;
     [Range(0.1f, 2.0f)]
     public float nodeEvaluationDist = 1.4f;
-    [Range(25.0f, 75.0f)]
+    [Range(10.0f, 75.0f)]
     public float boundRedundance = 50.0f;
     public bool patchDebug = false;
     private int meshSize = 8192;

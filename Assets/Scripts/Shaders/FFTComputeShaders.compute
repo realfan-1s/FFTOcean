@@ -159,6 +159,7 @@ void GenerateDisplaceTexture(uint3 id : SV_DISPATCHTHREADID){
     displaceRT[id.xy] = float4(x, y, z, 0);
 }
 
+// TODO: 法线失效？？？？？？
 [numthreads(8, 8, 1)]
 void GenerateBubblesAndNormals(uint3 id : SV_DISPATCHTHREADID){
     // 先计算两点间的单位长度

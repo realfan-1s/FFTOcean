@@ -16,8 +16,10 @@ Shader "Custom/Ocean"
 		_SubSurfaceColor("SubSurface Color", Color) = (1, 1, 1, 1)
 		_ShadowFactor("Shadow Factor", Range(0, 1.0)) = 0.2
 		_SubSurfacePower("SubSurface Power", Range(1.0, 2.0)) = 1.7
-		_SubSurfaceScale("SurSurface Scale", Range(0.0, 1.0)) = 5
+		_SubSurfaceScale("SurSurface Scale", Range(0.0, 1.0)) = 0.5
 		_Gloss("Gloss", Range(5.0, 20)) = 5.5
+		[Header(IBL DIFFUSE)]
+		_LUT("LUT", 2D) = "White" {}
 		[HideInInspector]_Displace ("_Displace", 2D) = "white" {}
 		[HideInInspector]_Normal("_Normal", 2D) = "white" {}
 		[HideInInspector]_Bubbles("_Bubbles", 2D) = "White" {}
@@ -48,6 +50,7 @@ Shader "Custom/Ocean"
 				float2 uv : TEXCOORD0;
 				float3 worldPos : TEXCOORD1;
 				half3 debugCol : TEXCOORD2;
+				SHADOW_COORDS(0)
 			};
 
 			StructuredBuffer<RenderPatch> patchList;
@@ -67,6 +70,7 @@ Shader "Custom/Ocean"
 			float _SubSurfacePower;
 			float _SubSurfaceScale;
 			fixed4 _SubSurfaceColor;
+			sampler2D _LUT;
 
 			static half3 quadTreeDebugs[6] = {
 				half3(0, 1, 0), // 绿
@@ -102,6 +106,7 @@ Shader "Custom/Ocean"
 				#if USE_PATCH_DEBUG
 				o.debugCol = quadTreeDebugs[patch.lodLevel];
 				#endif
+				TRANSFER_SHADOW(o)
 				return o;
 			}
 
@@ -116,8 +121,10 @@ Shader "Custom/Ocean"
 				return lerp(col1, col2, t);
 			}
 
-			// Fdiffuse = (baseColor / pi) * (1 + (Fd - 1) * pow(1 - dot(n, l), 5)) * (1 + (Fd - 1) * pow(1 - dot(n, v), 5))
-			// Fd = 0.5 + 2 * roughness * pow(dot(l, h), 2)
+			/*
+			Fdiffuse = (baseColor / pi) * (1 + (Fd - 1) * pow(1 - dot(n, l), 5)) * (1 + (Fd - 1) * pow(1 - dot(n, v), 5))
+			Fd = 0.5 + 2 * roughness * pow(dot(l, h), 2)
+			*/
 			inline fixed3 DisneyDiffuse(fixed3 baseColor, fixed roughness, half ldoth, half ndotl, half ndotv){
 				half fd = 0.5 + 2 * pow(ldoth, 2) * roughness;
 				half lightScatter = 1 + (fd - 1) * pow(1 - ndotl, 5);
@@ -132,10 +139,8 @@ Shader "Custom/Ocean"
 				return r4 * UNITY_INV_PI / (d * d + 1e-7);
 			}
 
-			inline half GGXVisibilityTerm(fixed r2, half ndotv, half ndotl){
-				half lambdaV = ndotl * (ndotv * (1 - r2) + r2);
-				half lambdaL = ndotv * (ndotl * (1 - r2) + r2);
-				return 0.5 / (lambdaL + lambdaV + 1e-5f);
+			inline half GGXShadowTerm(fixed r2, half ndotv, half ndotl){
+				return 0.5 / lerp(2 * ndotl * ndotv, ndotv + ndotl, r2);
 			}
 
 			/*
@@ -151,7 +156,6 @@ Shader "Custom/Ocean"
 				return sssCol * (waveHeight * 0.6 + fltRatio);
 			}
 
-			// TODO:重写着模型
 			half4 frag(v2f o) : SV_TARGET{
 				fixed3 normalDir = UnityObjectToWorldNormal(tex2D(_Normal, o.uv).rgb);
 				fixed bubbles = tex2D(_Bubbles, o.uv).r;
@@ -159,6 +163,7 @@ Shader "Custom/Ocean"
 				fixed3 viewDir = normalize(UnityWorldSpaceViewDir(o.worldPos));
 				fixed3 reflectDir = reflect(-viewDir, normalDir);
 				fixed3 halfDir = normalize(viewDir + lightDir);
+				UNITY_LIGHT_ATTENUATION(atten, o, o.worldPos);
 
 				// 计算之后公式所需的所有点乘项
 				half ldoth = saturate(dot(lightDir, halfDir));
@@ -167,33 +172,36 @@ Shader "Custom/Ocean"
 				half ndotv = saturate(dot(normalDir, viewDir));
 				half ndoth = saturate(dot(normalDir, halfDir));
 
-				//采样反射探头
 				half4 rgbm = UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0, reflectDir, 0);
 				half3 envMap = DecodeHDR(rgbm, unity_SpecCube0_HDR);
-				fixed3 oceanColor = lerp(_ShallowColor, _DeepColor, ndotl);
+				fixed3 oceanColor = lerp(_ShallowColor, _DeepColor, ndotv);
 				fixed3 bubbleColor =  _LightColor0.rgb * _BubbleColor.rgb * saturate(ndotl);
 				fixed3 albedo = lerp(oceanColor, bubbleColor, bubbles);
 				half oneMinusReflective = 1 - max(max(albedo.r, albedo.g), albedo.b);
 
 				fixed r2 = _Roughness * _Roughness;
-				half V = GGXVisibilityTerm(r2 , ndotv, ndotl);
+				half G = GGXShadowTerm(r2 , ndotv, ndotl);
 				half D = GGXTerm(r2, ndoth);
 				half3 F0 = lerp(half3(0.4, 0.4, 0.4), _SpecularColor * albedo, _Metalness);
 				half3 F = FresnelSchlick(F0, ldoth);
-				half3 specualr = V * D * F;
+				half3 specualr = G * D * F / (4 * ndotl * ndotv);
 
 				fixed3 diffColor = albedo * oneMinusReflective;
 				fixed3 diffuse = DisneyDiffuse(diffColor, _Roughness, ldoth, ndotl, ndotv);
 				half mips = _Roughness * (1.7 - 0.7 * _Roughness) * 6;
-				// 通过掠射角得到更加真实的菲涅尔反射效果，同时考虑了材质粗糙度的影响
-				half grazingTerm = saturate(2 - _Roughness - oneMinusReflective);
-				half surfaceReduction = 1.0 / (r2 + 1.0);
-				half3 indirectiveSpceular = surfaceReduction * envMap.rgb * FresnelLerp(F0, grazingTerm, ndotv);
-				// 水体次表面散射, https://zhuanlan.zhihu.com/p/95917609
-				half3 SubSurfaceScatter = CalSSS(lightDir, normalDir, viewDir, _SubSurfaceColor,
-				tex2D(_Displace, o.uv).g, _ShadowFactor, _SubSurfacePower, _SubSurfaceScale, _Gloss) * 0.01;
 
-				half3 col = UNITY_LIGHTMODEL_AMBIENT.rgb + UNITY_PI * (specualr + diffuse) * ndotl + indirectiveSpceular + SubSurfaceScatter;
+				// half grazingTerm = saturate(2 - _Roughness - oneMinusReflective);
+				// half surfaceReduction = 1.0 / (r2 + 1.0);
+				// half3 indirectiveSpceular = surfaceReduction * envMap.rgb * FresnelLerp(F0, grazingTerm, ndotv);
+				half2 brdf = tex2D(_LUT, float2(ndotv, _Roughness)).xy;
+				half3 indirectiveSpceular = envMap * (F * brdf.x + brdf.y);
+
+				// 水体次表面散射, https://zhuanlan.zhihu.com/p/95917609
+				half3 SubSurfaceScatter = CalSSS(lightDir, normalDir, viewDir, _SubSurfaceColor * 0.1,
+				tex2D(_Displace, o.uv).g, _ShadowFactor, _SubSurfacePower, _SubSurfaceScale, _Gloss);
+
+				half3 col = UNITY_LIGHTMODEL_AMBIENT.rgb + UNITY_PI * (diffuse + specualr) * ndotl * atten + indirectiveSpceular + SubSurfaceScatter;
+				UNITY_APPLY_FOG(i.fogCoord, col.rgb);
 				#if USE_PATCH_DEBUG
 				col = o.debugCol;
 				#endif

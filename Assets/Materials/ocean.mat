@@ -31,28 +31,32 @@ Material:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
+    - _LUT:
+        m_Texture: {fileID: 2800000, guid: 8c1c96c846448cf45afb0770b6a303e3, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     - _Normal:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     m_Floats:
     - _FresnelRatio: 0.03
-    - _Gloss: 7.5
+    - _Gloss: 15.4
     - _Glossiness: 1
     - _Metallic: 1
-    - _Metalness: 0.3
+    - _Metalness: 0.15
     - _Mips: 3.13
-    - _Roughness: 0.85
-    - _ShadowFactor: 0.45
-    - _SubSurfacePower: 1.35
-    - _SubSurfaceScale: 0.4
+    - _Roughness: 0.156
+    - _ShadowFactor: 0.6
+    - _SubSurfacePower: 1.73
+    - _SubSurfaceScale: 0.8
     - _SubSurfaceStrength: 0.4
     m_Colors:
     - _BubbleColor: {r: 1, g: 1, b: 1, a: 1}
     - _Color: {r: 0.10215378, g: 0, b: 1, a: 1}
-    - _DeepColor: {r: 0.050980393, g: 0.23529412, b: 0.43137255, a: 1}
+    - _DeepColor: {r: 0.11764706, g: 0.33285952, b: 0.47058824, a: 1}
     - _OceanColor: {r: 0, g: 0.32738873, b: 0.9433962, a: 1}
-    - _ShallowColor: {r: 0.11764706, g: 0.4509804, b: 0.43751514, a: 1}
+    - _ShallowColor: {r: 0.19272871, g: 0.6431373, b: 0.6666667, a: 1}
     - _Specular: {r: 1, g: 1, b: 1, a: 1}
     - _SpecularColor: {r: 0.2924528, g: 0.2924528, b: 0.2924528, a: 1}
-    - _SubSurfaceColor: {r: 0, g: 0.39215687, b: 0, a: 1}
+    - _SubSurfaceColor: {r: 0.007843138, g: 0.039215688, b: 0.015686275, a: 1}
