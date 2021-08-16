@@ -48,7 +48,7 @@ public class Ocean : MonoBehaviour
     // public Material heightMat;
     // public Material displaceZMat;
     // public Material displaceMat;
-    public Material normalMat;
+    // public Material normalMat;
     // public Material bubbleMat;
     // #region
     // [Header("Mesh相关参数")]
@@ -198,6 +198,7 @@ public class Ocean : MonoBehaviour
         }
 
         // 生成偏移纹理
+        // 生成偏移纹理
         oceanShader.SetTexture(kernelGenerateDisplaceTexture, "heightSpectrumRT", heightSpectrumRT);
         oceanShader.SetTexture(kernelGenerateDisplaceTexture, "displaceXSpectrumRT", displaceXSpectrumRT);
         oceanShader.SetTexture(kernelGenerateDisplaceTexture, "displaceZSpectrumRT", displaceZSpectrumRT);
@@ -208,7 +209,6 @@ public class Ocean : MonoBehaviour
         oceanShader.SetTexture(kernelGenerateBubblesAndNormals, "normalRT", normalRT);
         oceanShader.SetTexture(kernelGenerateBubblesAndNormals, "bubblesRT", bubbleRT);
         oceanShader.Dispatch(kernelGenerateBubblesAndNormals, fftSize / 8, fftSize / 8, 1);
-
         SetMaterial();
     }
     void SetMaterial()
@@ -221,7 +221,7 @@ public class Ocean : MonoBehaviour
         // heightMat.SetTexture("_MainTex", heightSpectrumRT);
         // displaceZMat.SetTexture("_MainTex", displaceZSpectrumRT);
         // displaceMat.SetTexture("_MainTex", displaceRT);
-        normalMat.SetTexture("_MainTex", normalRT);
+        // normalMat.SetTexture("_MainTex", normalRT);
         // bubbleMat.SetTexture("_MainTex", bubbleRT);
     }
     void FFT(int kernel, ref RenderTexture input)

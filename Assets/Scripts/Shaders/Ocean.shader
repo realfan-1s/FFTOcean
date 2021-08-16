@@ -9,6 +9,7 @@ Shader "Custom/Ocean"
 		_ShallowColor ("ShallowColor", Color) = (1,1,1,1)
 		_DeepColor("DeepColor", Color) = (1, 1, 1, 1)
 		_BubbleColor ("BubbleColor", Color) = (1, 1, 1, 1)
+		_BubbleStrength("BubbleStrength", Range(0, 1)) = 0.5
 		_SpecularColor("SpecularColor", Color) = (1, 1, 1, 1)
 		_Metalness("Metalness", Range(0, 1)) = 0.5
 		_Roughness("roughness", Range(0, 1)) = 0.5
@@ -18,8 +19,6 @@ Shader "Custom/Ocean"
 		_SubSurfacePower("SubSurface Power", Range(1.0, 2.0)) = 1.7
 		_SubSurfaceScale("SurSurface Scale", Range(0.0, 1.0)) = 0.5
 		_Gloss("Gloss", Range(5.0, 20)) = 5.5
-		[Header(IBL DIFFUSE)]
-		_LUT("LUT", 2D) = "White" {}
 		[HideInInspector]_Displace ("_Displace", 2D) = "white" {}
 		[HideInInspector]_Normal("_Normal", 2D) = "white" {}
 		[HideInInspector]_Bubbles("_Bubbles", 2D) = "White" {}
@@ -58,6 +57,7 @@ Shader "Custom/Ocean"
 			fixed4 _ShallowColor;
 			fixed4 _DeepColor;
 			fixed4 _BubbleColor;
+			fixed _BubbleStrength;
 			fixed4 _SpecularColor;
 			sampler2D _Displace;
 			sampler2D _Normal;
@@ -70,7 +70,6 @@ Shader "Custom/Ocean"
 			float _SubSurfacePower;
 			float _SubSurfaceScale;
 			fixed4 _SubSurfaceColor;
-			sampler2D _LUT;
 
 			static half3 quadTreeDebugs[6] = {
 				half3(0, 1, 0), // 绿
@@ -158,10 +157,9 @@ Shader "Custom/Ocean"
 
 			half4 frag(v2f o) : SV_TARGET{
 				fixed3 normalDir = UnityObjectToWorldNormal(tex2D(_Normal, o.uv).rgb);
-				fixed bubbles = tex2D(_Bubbles, o.uv).r;
 				fixed3 lightDir = normalize(UnityWorldSpaceLightDir(o.worldPos));
 				fixed3 viewDir = normalize(UnityWorldSpaceViewDir(o.worldPos));
-				fixed3 reflectDir = reflect(-viewDir, normalDir);
+				fixed3 reflectDir = normalize(reflect(-viewDir, normalDir));
 				fixed3 halfDir = normalize(viewDir + lightDir);
 				UNITY_LIGHT_ATTENUATION(atten, o, o.worldPos);
 
@@ -172,35 +170,35 @@ Shader "Custom/Ocean"
 				half ndotv = saturate(dot(normalDir, viewDir));
 				half ndoth = saturate(dot(normalDir, halfDir));
 
-				half4 rgbm = UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0, reflectDir, 0);
-				half3 envMap = DecodeHDR(rgbm, unity_SpecCube0_HDR);
-				fixed3 oceanColor = lerp(_ShallowColor, _DeepColor, ndotv);
 				fixed3 bubbleColor =  _LightColor0.rgb * _BubbleColor.rgb * saturate(ndotl);
-				fixed3 albedo = lerp(oceanColor, bubbleColor, bubbles);
-				half oneMinusReflective = 1 - max(max(albedo.r, albedo.g), albedo.b);
+				fixed3 bubbles = bubbleColor * tex2D(_Bubbles, o.uv).r * _BubbleStrength;
+				fixed3 albedo = lerp(_ShallowColor, _DeepColor, ndotv);
+				fixed oneMinusReflective = 1 - max(max(albedo.r, albedo.g), albedo.b);
 
 				fixed r2 = _Roughness * _Roughness;
 				half G = GGXShadowTerm(r2 , ndotv, ndotl);
 				half D = GGXTerm(r2, ndoth);
-				half3 F0 = lerp(half3(0.4, 0.4, 0.4), _SpecularColor * albedo, _Metalness);
+				half3 F0 = lerp(half3(0.04, 0.04, 0.04), _SpecularColor * albedo, _Metalness);
 				half3 F = FresnelSchlick(F0, ldoth);
 				half3 specualr = G * D * F / (4 * ndotl * ndotv);
-
 				fixed3 diffColor = albedo * oneMinusReflective;
-				fixed3 diffuse = DisneyDiffuse(diffColor, _Roughness, ldoth, ndotl, ndotv);
-				half mips = _Roughness * (1.7 - 0.7 * _Roughness) * 6;
+				fixed3 kd = (1 - F) * (1 - _Metalness);
+				fixed3 diffuse = kd * DisneyDiffuse(diffColor, _Roughness, ldoth, ndotl, ndotv);
 
-				// half grazingTerm = saturate(2 - _Roughness - oneMinusReflective);
-				// half surfaceReduction = 1.0 / (r2 + 1.0);
-				// half3 indirectiveSpceular = surfaceReduction * envMap.rgb * FresnelLerp(F0, grazingTerm, ndotv);
-				half2 brdf = tex2D(_LUT, float2(ndotv, _Roughness)).xy;
-				half3 indirectiveSpceular = envMap * (F * brdf.x + brdf.y);
+				half mipLevel = 6 * _Roughness * (1.7 - 0.7 * _Roughness);
+				half4 rgbm = UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0, reflectDir, mipLevel);
+				half3 envMap = DecodeHDR(rgbm, unity_SpecCube0_HDR);
+				half grazingTerm = saturate(2 - _Roughness - oneMinusReflective);
+				half surfaceReduction = 1.0 / (r2 + 1.0);
+				half3 indirectSpceular = surfaceReduction * envMap.rgb * FresnelLerp(F0, grazingTerm, ndotv);
+				half3 indirectDiffuse = kd * albedo * max(0, ShadeSH9(fixed4(normalDir, 1.0)) + 0.03 * albedo);
+				half3 indirectLight = indirectDiffuse + indirectSpceular;
 
 				// 水体次表面散射, https://zhuanlan.zhihu.com/p/95917609
 				half3 SubSurfaceScatter = CalSSS(lightDir, normalDir, viewDir, _SubSurfaceColor * 0.1,
 				tex2D(_Displace, o.uv).g, _ShadowFactor, _SubSurfacePower, _SubSurfaceScale, _Gloss);
 
-				half3 col = UNITY_LIGHTMODEL_AMBIENT.rgb + UNITY_PI * (diffuse + specualr) * ndotl * atten + indirectiveSpceular + SubSurfaceScatter;
+				half3 col = bubbles + (diffuse + UNITY_PI * specualr) * max(0, ndotl) * atten * _LightColor0.rgb + indirectLight + SubSurfaceScatter;
 				UNITY_APPLY_FOG(i.fogCoord, col.rgb);
 				#if USE_PATCH_DEBUG
 				col = o.debugCol;

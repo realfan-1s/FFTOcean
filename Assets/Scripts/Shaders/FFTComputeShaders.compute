@@ -60,9 +60,7 @@ void CreateHeightSpectrum(uint3 id : SV_DISPATCHTHREADID){
     float omega = Dispersion(k) * time;
     float c = cos(omega);
     float s = sin(omega);
-
     float2 ans = ComplexMul(hide0, float2(c, s)) + ComplexMul(hide0Conj, float2(c, -s));
-
     heightSpectrumRT[id.xy] = float4(ans, 0, 0);
 }
 
@@ -152,14 +150,9 @@ void GenerateDisplaceTexture(uint3 id : SV_DISPATCHTHREADID){
     float y = length(heightSpectrumRT[id.xy].xy) / pow(textureSize, 2) * heightScale; // 生成高度
     float x = length(displaceXSpectrumRT[id.xy].xy) / pow(textureSize, 2) * lambda; // 生成横向偏移
     float z = length(displaceZSpectrumRT[id.xy].xy) / pow(textureSize, 2) * lambda; // 生成纵向偏移
-
-    heightSpectrumRT[id.xy] = float4(y, y, y, 0);
-    displaceXSpectrumRT[id.xy] = float4(x, x, x, 0);
-    displaceZSpectrumRT[id.xy] = float4(z, z, z, 0);
     displaceRT[id.xy] = float4(x, y, z, 0);
 }
 
-// TODO: 法线失效？？？？？？
 [numthreads(8, 8, 1)]
 void GenerateBubblesAndNormals(uint3 id : SV_DISPATCHTHREADID){
     // 先计算两点间的单位长度
@@ -169,7 +162,6 @@ void GenerateBubblesAndNormals(uint3 id : SV_DISPATCHTHREADID){
     uint2 uvX2 = uint2((id.x + 1.0 + textureSize) % textureSize, id.y);
     uint2 uvZ1 = uint2(id.x, (id.y - 1.0 + textureSize) % textureSize);
     uint2 uvZ2 = uint2(id.x, (id.y + 1.0 + textureSize) % textureSize);
-
     // 以当前点为中心，获取周围四个点的偏移值
     float3 x1D = displaceRT[uvX1].xyz;
     float3 x2D = displaceRT[uvX2].xyz;
@@ -184,11 +176,9 @@ void GenerateBubblesAndNormals(uint3 id : SV_DISPATCHTHREADID){
     float3 tangetX = x2 - x1;
     float3 tangetZ = z2 - z1;
     float3 normal = normalize(cross(tangetZ, tangetX));
-
     // 雅可比行列式计算泡沫
     float3 ddx = x2D - x1D;
     float3 ddz = z2D - z1D;
-
     float jacobian = (1.0f + ddx.x) * (1.0f + ddz.z) - ddx.z * ddz.x;
     jacobian = saturate(max(0, bubbleThreshold - saturate(jacobian)) * bubbleScale);
     normalRT[id.xy] = float4(normal, 0);

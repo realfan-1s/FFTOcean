@@ -1,8 +1,8 @@
 ﻿#ifndef COMMON_NUMBER
 #define COMMON_NUMBER
 
-#define PI 3.14159265f
-#define lgN 2.718281828459f
+#define PI 3.1415926535897
+#define lgN 2.718281828459
 #define G 9.81f
 
 #endif
