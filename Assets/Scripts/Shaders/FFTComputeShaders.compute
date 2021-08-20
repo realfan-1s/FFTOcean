@@ -18,7 +18,7 @@ uint randState;
 float time;
 float heightScale; // 高度的权重
 float lambda; // 偏移权重
-uint Ns; // Ms = pow(2, m - 1),m表示第几阶段
+uint Ns; // Ns = pow(2, m - 1),m表示第几阶段
 float bubbleThreshold; // 泡沫阈值
 float bubbleScale;
 
@@ -91,21 +91,6 @@ void FFTHorizontal(uint3 id : SV_DISPATCHTHREADID){
     outputRT[id.xy] = float4(x0 + ComplexMul(x1, w), 0, 0);
 }
 
-// Y轴FFT
-[numthreads(8, 8, 1)]
-void FFTVertical(uint3 id : SV_DISPATCHTHREADID){
-    uint2 idxs = id.xy;
-    // 计算出输入索引
-    idxs.y = floor(id.y / (Ns * 2.0)) * Ns + id.y % Ns;
-    // 计算权重值
-    float angle = 2.0 * PI * (id.y / (Ns * 2.0));
-    float2 w = float2(cos(angle), sin(angle));
-    // 进行复数乘法，随后相加输出
-    float2 x0 = inputRT[idxs].xy;
-    float2 x1 = inputRT[int2(idxs.x, idxs.y + textureSize * 0.5)].xy;
-    outputRT[id.xy] = float4(x0 + ComplexMul(x1, w), 0, 0);
-}
-
 [numthreads(8, 8, 1)]
 void FFTHorizontalEnd(uint3 id :SV_DISPATCHTHREADID){
     uint2 idxs = id.xy;
@@ -123,6 +108,21 @@ void FFTHorizontalEnd(uint3 id :SV_DISPATCHTHREADID){
     int x = id.x - textureSize * 0.5;
     ans *= ((x + 1) % 2.0f)  + (x % 2.0f) * (-1);
     outputRT[id.xy] = float4(ans, 0, 0);
+}
+
+// Y轴FFT
+[numthreads(8, 8, 1)]
+void FFTVertical(uint3 id : SV_DISPATCHTHREADID){
+    uint2 idxs = id.xy;
+    // 计算出输入索引
+    idxs.y = floor(id.y / (Ns * 2.0)) * Ns + id.y % Ns;
+    // 计算权重值
+    float angle = 2.0 * PI * (id.y / (Ns * 2.0));
+    float2 w = float2(cos(angle), sin(angle));
+    // 进行复数乘法，随后相加输出
+    float2 x0 = inputRT[idxs].xy;
+    float2 x1 = inputRT[int2(idxs.x, idxs.y + textureSize * 0.5)].xy;
+    outputRT[id.xy] = float4(x0 + ComplexMul(x1, w), 0, 0);
 }
 
 [numthreads(8, 8, 1)]
@@ -147,9 +147,12 @@ void FFTVerticalEnd(uint3 id : SV_DISPATCHTHREADID){
 // 生成偏移纹理贴图
 [numthreads(8, 8, 1)]
 void GenerateDisplaceTexture(uint3 id : SV_DISPATCHTHREADID){
-    float y = length(heightSpectrumRT[id.xy].xy) / pow(textureSize, 2) * heightScale; // 生成高度
-    float x = length(displaceXSpectrumRT[id.xy].xy) / pow(textureSize, 2) * lambda; // 生成横向偏移
-    float z = length(displaceZSpectrumRT[id.xy].xy) / pow(textureSize, 2) * lambda; // 生成纵向偏移
+    float y = length(heightSpectrumRT[id.xy].xy) / pow(textureSize, 2) * heightScale;
+    float x = length(displaceXSpectrumRT[id.xy].xy) / pow(textureSize, 2) * lambda;
+    float z = length(displaceZSpectrumRT[id.xy].xy) / pow(textureSize, 2) * lambda;
+    displaceXSpectrumRT[id.xy] = float4(x, x, x, 0);
+    heightSpectrumRT[id.xy] = float4(y, y, y, 0);
+    displaceZSpectrumRT[id.xy] = float4(z, z, z, 0);
     displaceRT[id.xy] = float4(x, y, z, 0);
 }
 
@@ -202,7 +205,6 @@ float DonelanBannerDirectionalSpreading(float2 k){
     }
     float theta = atan2(k.y, k.x) - atan2(windAndSeed.y, windAndSeed.x);
     return beta / max(1e-7, 2.0f * tanh(beta * PI) * pow(cosh(beta * theta), 2));
-    // return beta / max(1e-6, 2.0 * tanh(beta * PI) * pow(cosh(beta * theta), 2));
 }
 
 // 计算phillips频谱

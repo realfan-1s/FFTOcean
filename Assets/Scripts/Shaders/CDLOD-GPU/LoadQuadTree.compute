@@ -29,9 +29,8 @@ uniform float controllerC;// 用户可控制系数
 - nodeSize为Node的边长(米)
 - nodeCount等于WorldSize/nodeSize
 - patchExtent等于nodeSize/16,用于计算包围盒的半高宽
-- sectorCountPerNode等于2^lod
 */
-uniform float4 worldLodParams[6];
+uniform float3 worldLodParams[6];
 uniform uint offsetOfNodeID[6];
 /* 裁剪相关变量 */
 uniform float4 cameraFrustumPlanes[6];
@@ -39,6 +38,7 @@ AppendStructuredBuffer<RenderPatch> culledPatchList;
 
 uint GetNodeID(uint2 nodeLodCount, uint lodLevel);
 float GetNodeSize(uint lodLevel);
+float GetNodeSumDistance(uint lodLevel);
 float GetNodeCount(uint lodLevel);
 // float GetPatchExtent(uint lodLevel);
 bool EvaluateNode(uint2 nodeLodCount, uint lodLevel);
@@ -52,11 +52,10 @@ Bounds GetPatchBounds(RenderPatch patch);
 
 /*
 遍历二叉树
-1. 将当前PassLOD设为5
-2. 执行Dispatch
-3. 从ConsumeNodeList中获取节点，对节点进行评价，决定是否分割。
-4. 如果决定分割，那么将分割后的4个节点加入AppendNodeList,否则将当前节点加入AppendFinalNodeList
-5. Dispatch结束, 将当前PassLOD减1，互换ConsumeNodeList和AppendNodeList，回到2执行下一个Pass
+1. 执行Dispatch
+2. 从ConsumeNodeList中获取节点，对节点进行评价，决定是否分割。
+3. 如果决定分割，那么将分割后的4个节点加入AppendNodeList,否则将当前节点加入AppendFinalNodeList
+4. Dispatch结束, 将当前PassLOD减1，互换ConsumeNodeList和AppendNodeList，回到1执行下一个Pass
 */
 [numthreads(1, 1, 1)]
 void TraverseQuadTree(uint3 id : SV_DispatchThreadID){
@@ -64,14 +63,12 @@ void TraverseQuadTree(uint3 id : SV_DispatchThreadID){
     uint nodeID = GetNodeID(nodeLodCount, curLOD);
     NodeDescription nodeDesc = nodeInfoList[nodeID];
     if (curLOD > 0 && EvaluateNode(nodeLodCount, curLOD)){
-        // 划分四叉树, 将原先的一个节点进一步拆分成四个
         appendNodeList.Append(nodeLodCount * 2 + uint2(0, 0));
         appendNodeList.Append(nodeLodCount * 2 + uint2(1, 0));
         appendNodeList.Append(nodeLodCount * 2 + uint2(0, 1));
         appendNodeList.Append(nodeLodCount * 2 + uint2(1, 1));
         nodeDesc.isLeaf = 0;
     } else {
-        // 不划分四叉树，直接加入到最终节点中
         appendFinalNodeList.Append(uint3(nodeLodCount, curLOD));
         nodeDesc.isLeaf = 1;
     }
@@ -98,7 +95,6 @@ void CreatePatches(uint3 id : SV_DISPATCHTHREADID, uint3 groupId : SV_GROUPID, u
 } 
 
 // TODO: Hierarchical Z-Buffering Occlusion Culling
-// 在GPU中替代unordered_map，建立一个uint3->uint的映射，将uint作为下标数组索引NodeDescriptBuffer
 uint GetNodeID(uint2 nodeLodCount, uint lodLevel){
     return GetNodeCount(lodLevel) * nodeLodCount.y + nodeLodCount.x + offsetOfNodeID[lodLevel];
 }
@@ -118,7 +114,7 @@ float GetNodeExtent(uint lodLevel){
 float2 GetNodeCenterPos2(uint2 nodeLodCount, uint lodLevel){
     float nodeSize = GetNodeSize(lodLevel);
     float nodeCount = GetNodeCount(lodLevel);
-    return ((float2)nodeLodCount - (nodeCount - 1) * 0.5) * nodeSize;
+    return (nodeLodCount - (nodeCount - 1) * 0.5) * nodeSize;
 }
 
 float3 GetNodeCenterPos(uint2 nodeLodCount, uint lodLevel){
@@ -128,14 +124,9 @@ float3 GetNodeCenterPos(uint2 nodeLodCount, uint lodLevel){
     return float3(temp.x, height, temp.y);
 }
 
-/*
-评价公式为f = d / (n * c)
-其中d为摄像机到节点中心距离，n为节点边长，c为用户控制系数。
-当f < 1时，则对节点进行分割。易知，c越大，节点越容易被分割。
-*/
 bool EvaluateNode(uint2 nodeLodCount, uint lodLevel){
     float cameraDist = distance(cameraPos, GetNodeCenterPos(nodeLodCount, lodLevel));
-    float f = 1 * cameraDist / (GetNodeSize(lodLevel) * controllerC);
+    float f = cameraDist / (64 * (pow(2, lodLevel + 1) - 1) * controllerC);
     if (f < 1){
         return true;
     }

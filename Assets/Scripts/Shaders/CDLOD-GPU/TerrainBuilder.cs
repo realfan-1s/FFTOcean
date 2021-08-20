@@ -83,7 +83,6 @@ public class TerrainBuilder : IDisposable
     private ComputeBuffer nodeInfoList;
     private ComputeBuffer finalNodeList;
     private ComputeBuffer maxNodeList;
-    // 传入shader中
     private ComputeBuffer _culledPatchList;
     public ComputeBuffer culledPatchList { get => _culledPatchList; }
     // indirectArgs表示创建patch所需要的线程组的数量
@@ -130,7 +129,7 @@ public class TerrainBuilder : IDisposable
     }
     #endregion
     public TerrainBuilder(RenderTexture _minMaxHeightMaps, Vector3 _worldSize,
-    int _maxBufferSize = 200, int _maxLodSize = 4, int _lodCount = 6)
+    int _maxBufferSize = 400, int _maxLodSize = 4, int _lodCount = 6)
     {
         maxLodSize = _maxLodSize;
         lodCount = _lodCount;
@@ -174,17 +173,17 @@ public class TerrainBuilder : IDisposable
         float wSize = tb.worldSize.x;
         int nodeCount = TerrainBase.MAX_LOD_COUNT;
         Vector4[] worldLodParams = new Vector4[TerrainBase.MAX_LOD_DEPTH + 1];
-        int[] offsetOfNodeID = new int[(TerrainBase.MAX_LOD_DEPTH + 1) * 4];
+        int[] offsetOfNodeID = new int[TerrainBase.MAX_LOD_DEPTH + 1];
+        float[] lodRange = new float[TerrainBase.MAX_LOD_DEPTH + 1];
         int offset = 0;
 
         for (int lod = TerrainBase.MAX_LOD_DEPTH; lod > -1; --lod)
         {
             float nodeSize = wSize / nodeCount;
             float halfExtent = nodeSize / 16.0f;
-            float sector = Mathf.Pow(2, lod);
-            worldLodParams[lod] = new Vector4(nodeSize, nodeCount, halfExtent, sector);
+            worldLodParams[lod] = new Vector4(nodeSize, nodeCount, halfExtent, 0);
 
-            offsetOfNodeID[lod * 4] = offset;
+            offsetOfNodeID[lod] = offset;
             offset += nodeCount * nodeCount;
             nodeCount *= 2;
         }

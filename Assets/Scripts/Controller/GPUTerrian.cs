@@ -5,8 +5,8 @@ public class GPUTerrian : MonoBehaviour
 {
     private Ocean ocean;
     private TerrainBuilder terrain;
-    [Range(0.1f, 2.0f)]
-    public float nodeEvaluationDist = 1.4f;
+    [Range(0.01f, 1.0f)]
+    public float nodeEvaluationDist = 0.4f;
     [Range(10.0f, 75.0f)]
     public float boundRedundance = 50.0f;
     public bool patchDebug = false;

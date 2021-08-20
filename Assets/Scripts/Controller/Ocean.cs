@@ -4,11 +4,10 @@ using System.Collections.Generic;
 public class Ocean : MonoBehaviour
 {
     #region
-    [Header("FFT控制参数")]
-    [Range(3, 14)]
-    public int fftRatio = 8; // 纹理尺寸&进行FFT的次数
+    public int fftRatio { get; private set; } // 纹理尺寸&进行FFT的次数
     // public int meshWidth = 200; // 长宽
     // public int meshSize = 10; // 网格长度
+    [Header("FFT控制参数")]
     public float A = 10;
     public Vector4 windAndSeed = new Vector4(1.0f, 2.0f, 0, 0);
     public float windScale = 2.0f; // 风的强度
@@ -44,12 +43,13 @@ public class Ocean : MonoBehaviour
 
     [Header("海洋材质")]
     public Material oceanMat;
+    // public Material GaussianMat;
     // public Material displaceXMat;
     // public Material heightMat;
     // public Material displaceZMat;
     // public Material displaceMat;
-    // public Material normalMat;
-    // public Material bubbleMat;
+    public Material normalMat;
+    public Material bubbleMat;
     // #region
     // [Header("Mesh相关参数")]
     // private MeshFilter filter;
@@ -62,6 +62,7 @@ public class Ocean : MonoBehaviour
     // #endregion
     void Awake()
     {
+        fftRatio = 9;
         // // 添加mesh renderer、mesh Filter
         // filter = gameObject.GetComponent<MeshFilter>();
         // if (!filter)
@@ -129,7 +130,6 @@ public class Ocean : MonoBehaviour
         // 传入关键参数
         oceanShader.SetInt("textureSize", fftSize);
         // oceanShader.SetFloat("oceanLength", meshSize);
-
         // 计算高斯随机数
         oceanShader.SetTexture(kernelComputeGaussian, "gaussianRT", gaussianRT);
         oceanShader.Dispatch(kernelComputeGaussian, fftSize / 8, fftSize / 8, 1);
@@ -197,8 +197,6 @@ public class Ocean : MonoBehaviour
             }
         }
 
-        // 生成偏移纹理
-        // 生成偏移纹理
         oceanShader.SetTexture(kernelGenerateDisplaceTexture, "heightSpectrumRT", heightSpectrumRT);
         oceanShader.SetTexture(kernelGenerateDisplaceTexture, "displaceXSpectrumRT", displaceXSpectrumRT);
         oceanShader.SetTexture(kernelGenerateDisplaceTexture, "displaceZSpectrumRT", displaceZSpectrumRT);
@@ -217,6 +215,7 @@ public class Ocean : MonoBehaviour
         oceanMat.SetTexture("_Normal", normalRT);
         oceanMat.SetTexture("_Bubbles", bubbleRT);
 
+        // GaussianMat.SetTexture("_MainTex", gaussianRT);
         // displaceXMat.SetTexture("_MainTex", displaceXSpectrumRT);
         // heightMat.SetTexture("_MainTex", heightSpectrumRT);
         // displaceZMat.SetTexture("_MainTex", displaceZSpectrumRT);

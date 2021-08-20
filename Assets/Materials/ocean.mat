@@ -56,6 +56,7 @@ Material:
     - _SubSurfacePower: 1.37
     - _SubSurfaceScale: 0.8
     - _SubSurfaceStrength: 0.4
+    - _UserScale: 0.2
     m_Colors:
     - _BubbleColor: {r: 1, g: 1, b: 1, a: 1}
     - _Color: {r: 0.10215378, g: 0, b: 1, a: 1}
