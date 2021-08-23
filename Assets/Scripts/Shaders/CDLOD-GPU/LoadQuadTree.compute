@@ -89,8 +89,8 @@ void CreatePatches(uint3 id : SV_DISPATCHTHREADID, uint3 groupId : SV_GROUPID, u
     // 生成patch
     RenderPatch patch = GeneratePatch(nodeLodCount, patchOffset);
     Bounds bound = GetPatchBounds(patch);
-    if (FrustmCull(cameraFrustumPlanes, bound))
-        return;
+    // if (FrustmCull(cameraFrustumPlanes, bound))
+    //     return;
     culledPatchList.Append(patch);
 } 
 

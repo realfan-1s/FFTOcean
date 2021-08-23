@@ -179,7 +179,7 @@ Shader "Custom/Ocean"
 				half D = GGXTerm(r2, ndoth);
 				half3 F0 = lerp(half3(0.04, 0.04, 0.04), _SpecularColor * albedo, _Metalness);
 				half3 F = FresnelSchlick(F0, ldoth);
-				half3 specualr = G * D * F / (4 * ndotl * ndotv);
+				half3 specualr = G * D * F;
 				fixed3 diffColor = albedo * oneMinusReflective;
 				fixed3 kd = (1 - F) * (1 - _Metalness);
 				fixed3 diffuse = kd * DisneyDiffuse(diffColor, _Roughness, ldoth, ndotl, ndotv);

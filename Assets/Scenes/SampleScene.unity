@@ -804,7 +804,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   A: 50
-  windAndSeed: {x: 25, y: 25, z: 0, w: 0}
+  windAndSeed: {x: 25, y: 0, z: 0, w: 0}
   windScale: 30
   lambda: 7
   timeScale: 2
