@@ -5,7 +5,7 @@ public class GPUTerrian : MonoBehaviour
 {
     private Ocean ocean;
     private TerrainBuilder terrain;
-    [Range(0.01f, 1.0f)]
+    [Range(0.01f, 0.9f)]
     public float nodeEvaluationDist = 0.4f;
     [Range(10.0f, 75.0f)]
     public float boundRedundance = 50.0f;
@@ -16,15 +16,13 @@ public class GPUTerrian : MonoBehaviour
         ocean = transform.GetComponent<Ocean>();
         int heightSize = (int)Mathf.Pow(2, ocean.fftRatio);
         MinMaxTextureMgr.instance.Generate(ocean.GetHeightRT(), heightSize);
-        Vector3 worldSize = new Vector3(meshSize, 1024, meshSize);
-        terrain = new TerrainBuilder(MinMaxTextureMgr.instance.GetMinMaxHeightRT(), worldSize);
     }
     private void Start()
     {
-        ocean.oceanShader.SetFloat("oceanLength", meshSize);
+        Vector3 worldSize = new Vector3(meshSize, 1024, meshSize);
+        terrain = new TerrainBuilder(MinMaxTextureMgr.instance.GetMinMaxHeightRT(), worldSize);
         ocean.oceanMat.SetBuffer("patchList", terrain.culledPatchList);
         ocean.oceanShader.SetFloats("worldSize", new float[3] { meshSize, ocean.heightScale, meshSize });
-
         terrain.conrollerC = this.nodeEvaluationDist;
     }
 

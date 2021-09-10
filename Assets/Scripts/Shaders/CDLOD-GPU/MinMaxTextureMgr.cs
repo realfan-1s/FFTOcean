@@ -36,6 +36,8 @@ public class MinMaxTextureMgr
         patchMapSize = _patchSize;
         minMaxHeightRT = Ocean.CreateRT(patchMapSize);
         isInit = true;
+        minMaxCS.SetTexture(kernelPatchMinMaxHeight, "heightRT", heightRT);
+        minMaxCS.SetTexture(kernelPatchMinMaxHeight, "minMaxHeightRT", minMaxHeightRT);
     }
     public void RefreshInfos()
     {
@@ -45,8 +47,6 @@ public class MinMaxTextureMgr
     }
     public void CalculateHeightMap()
     {
-        minMaxCS.SetTexture(kernelPatchMinMaxHeight, "heightRT", heightRT);
-        minMaxCS.SetTexture(kernelPatchMinMaxHeight, "minMaxHeightRT", minMaxHeightRT);
         int groupX, groupY;
         CalculateGroupXY(patchMapSize, out groupX, out groupY);
         minMaxCS.Dispatch(kernelPatchMinMaxHeight, groupX, groupY, 1);

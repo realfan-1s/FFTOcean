@@ -48,8 +48,8 @@ public class Ocean : MonoBehaviour
     // public Material heightMat;
     // public Material displaceZMat;
     // public Material displaceMat;
-    public Material normalMat;
-    public Material bubbleMat;
+    // public Material normalMat;
+    // public Material bubbleMat;
     // #region
     // [Header("Mesh相关参数")]
     // private MeshFilter filter;
@@ -319,6 +319,7 @@ public class Ocean : MonoBehaviour
         desc.useMipMap = true;
         var rt = new RenderTexture(desc);
         rt.filterMode = FilterMode.Point;
+        rt.Create();
         return rt;
     }
     public static RenderTexture CreateRT(int size, RenderTextureFormat format)

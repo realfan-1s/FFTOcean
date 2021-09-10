@@ -1,5 +1,6 @@
 ﻿#pragma kernel TraverseQuadTree
 #pragma kernel CreatePatches
+#pragma kernel MorphArea
 
 #include "Struct.compute"
 
@@ -89,10 +90,16 @@ void CreatePatches(uint3 id : SV_DISPATCHTHREADID, uint3 groupId : SV_GROUPID, u
     // 生成patch
     RenderPatch patch = GeneratePatch(nodeLodCount, patchOffset);
     Bounds bound = GetPatchBounds(patch);
-    // if (FrustmCull(cameraFrustumPlanes, bound))
-    //     return;
+    if (FrustmCull(cameraFrustumPlanes, bound))
+        return;
     culledPatchList.Append(patch);
-} 
+}
+
+// TODO: Morph Area 弥合接缝
+[numthreads(8, 8, 1)]
+void MorphArea(uint3 id : SV_DISPATCHTHREADID){
+
+}
 
 // TODO: Hierarchical Z-Buffering Occlusion Culling
 uint GetNodeID(uint2 nodeLodCount, uint lodLevel){
@@ -140,7 +147,7 @@ RenderPatch GeneratePatch(uint3 nodeLodCount, uint2 offset){
     float2 nodeCenterPos = GetNodeCenterPos2(nodeLodCount.xy, lod);
 
     uint2 patchLodCount = nodeLodCount.xy * NODE_DIVIDE_PATCHES + offset;
-    float2 minMaxHeight = minMaxHeightRT.mips[lod][patchLodCount].xy * worldSize.y + float2(-boundRedundance, boundRedundance);
+    float2 minMaxHeight = minMaxHeightRT.mips[lod + 2][patchLodCount].xy * worldSize.y + float2(-boundRedundance, boundRedundance);
     RenderPatch patch;
     patch.worldPos = nodeCenterPos + patchSize * (offset - (NODE_DIVIDE_PATCHES - 1) * 0.5);
     patch.minMaxHeight = minMaxHeight;

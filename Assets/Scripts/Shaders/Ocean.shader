@@ -8,8 +8,7 @@ Shader "Custom/Ocean"
 	{
 		_ShallowColor ("ShallowColor", Color) = (1,1,1,1)
 		_DeepColor("DeepColor", Color) = (1, 1, 1, 1)
-		_BubbleColor ("BubbleColor", Color) = (1, 1, 1, 1)
-		_BubbleStrength("BubbleStrength", Range(0, 1)) = 0.5
+		[HDR]_BubbleColor ("BubbleColor", Color) = (1, 1, 1, 1)
 		_SpecularColor("SpecularColor", Color) = (1, 1, 1, 1)
 		_Metalness("Metalness", Range(0, 1)) = 0.5
 		_Roughness("roughness", Range(0, 1)) = 0.5
@@ -57,7 +56,6 @@ Shader "Custom/Ocean"
 			fixed4 _ShallowColor;
 			fixed4 _DeepColor;
 			fixed4 _BubbleColor;
-			fixed _BubbleStrength;
 			fixed4 _SpecularColor;
 			sampler2D _Displace;
 			sampler2D _Normal;
@@ -73,8 +71,8 @@ Shader "Custom/Ocean"
 			fixed4 _SubSurfaceColor;
 
 			static half3 quadTreeDebugs[6] = {
-				half3(1, 0, 0), 
-				half3(0, 1, 0), 
+				half3(1, 0, 0),
+				half3(0, 1, 0),
 				half3(0, 0, 1),
 				half3(1, 1, 0),
 				half3(0, 1, 1),
@@ -170,7 +168,7 @@ Shader "Custom/Ocean"
 				half ndoth = saturate(dot(normalDir, halfDir));
 
 				fixed3 bubbleColor =  _LightColor0.rgb * _BubbleColor.rgb * ndotl;
-				fixed3 bubbles = bubbleColor * tex2D(_Bubbles, o.uv).r * _BubbleStrength;
+				fixed bubbles = tex2D(_Bubbles, o.uv).r;
 				fixed3 albedo = lerp(_ShallowColor, _DeepColor, ndotv);
 				fixed oneMinusReflective = 1 - max(max(albedo.r, albedo.g), albedo.b);
 
@@ -201,7 +199,8 @@ Shader "Custom/Ocean"
 				half3 SubSurfaceScatter = CalSSS(lightDir, normalDir, viewDir, _SubSurfaceColor * 0.1,
 				tex2D(_Displace, o.uv).g, _ShadowFactor, _SubSurfacePower, _SubSurfaceScale, _Gloss);
 
-				half3 col = bubbles + (diffuse + UNITY_PI * specualr) * max(0, ndotl) * atten * _LightColor0.rgb + indirectLight + SubSurfaceScatter;
+				half3 col = bubbles * _BubbleColor + (diffuse + UNITY_PI * specualr) * max(0, ndotl) * atten * _LightColor0.rgb + indirectLight + SubSurfaceScatter;
+
 				#if USE_PATCH_DEBUG
 				col = o.debugCol;
 				#endif

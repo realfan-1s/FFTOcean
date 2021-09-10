@@ -11,7 +11,6 @@
 #include "Common.compute"
 
 uint textureSize; // 纹理的大小
-float oceanLength; // 每一块海洋的长度
 float A; // phillips频谱参数
 float4 windAndSeed; // 风力大小(xy),随机数种子(zw)
 uint randState;
@@ -106,7 +105,7 @@ void FFTHorizontalEnd(uint3 id :SV_DISPATCHTHREADID){
     float2 x1 = inputRT[int2(idxs.x + textureSize * 0.5, idxs.y)].xy;
     float2 ans = x0 + ComplexMul(x1, w);
     int x = id.x - textureSize * 0.5;
-    ans *= ((x + 1) % 2.0f)  + (x % 2.0f) * (-1);
+    ans *= ((x + 1) % 2.0)  + (x % 2.0) * (-1);
     outputRT[id.xy] = float4(ans, 0, 0);
 }
 
@@ -140,26 +139,21 @@ void FFTVerticalEnd(uint3 id : SV_DISPATCHTHREADID){
     float2 x1 = inputRT[int2(idxs.x, idxs.y + textureSize * 0.5)].xy;
     float2 ans = x0 + ComplexMul(x1, w);
     int x = id.y - textureSize * 0.5;
-    ans *= ((x + 1) % 2.0f)  + (x % 2.0f) * (-1);
+    ans *= ((x + 1) % 2.0)  + (x % 2.0) * (-1);
     outputRT[id.xy] = float4(ans, 0, 0);
 }
 
 // 生成偏移纹理贴图
 [numthreads(8, 8, 1)]
 void GenerateDisplaceTexture(uint3 id : SV_DISPATCHTHREADID){
-    float y = length(heightSpectrumRT[id.xy].xy) / pow(textureSize, 2) * heightScale;
-    float x = length(displaceXSpectrumRT[id.xy].xy) / pow(textureSize, 2) * lambda;
-    float z = length(displaceZSpectrumRT[id.xy].xy) / pow(textureSize, 2) * lambda;
-    displaceXSpectrumRT[id.xy] = float4(x, x, x, 0);
-    heightSpectrumRT[id.xy] = float4(y, y, y, 0);
-    displaceZSpectrumRT[id.xy] = float4(z, z, z, 0);
+    float y = heightScale * length(heightSpectrumRT[id.xy].xy) / pow(textureSize, 2);
+    float x = lambda * length(displaceXSpectrumRT[id.xy].xy) / pow(textureSize, 2);
+    float z = lambda * length(displaceZSpectrumRT[id.xy].xy) / pow(textureSize, 2);
     displaceRT[id.xy] = float4(x, y, z, 0);
 }
 
 [numthreads(8, 8, 1)]
 void GenerateBubblesAndNormals(uint3 id : SV_DISPATCHTHREADID){
-    // 先计算两点间的单位长度
-    float uLength = oceanLength / (textureSize - 1.0);
     // 获取当前点周围的四个点坐标
     uint2 uvX1 = uint2((id.x - 1.0 + textureSize) % textureSize, id.y);
     uint2 uvX2 = uint2((id.x + 1.0 + textureSize) % textureSize, id.y);
@@ -171,10 +165,10 @@ void GenerateBubblesAndNormals(uint3 id : SV_DISPATCHTHREADID){
     float3 z1D = displaceRT[uvZ1].xyz;
     float3 z2D = displaceRT[uvZ2].xyz;
     // 将当前点视为原点，构建周围四个点的坐标
-    float3 x1 = float3(x1D.x - uLength, x1D.yz);
-    float3 x2 = float3(x2D.x + uLength, x2D.yz);
-    float3 z1 = float3(z1D.xy, z1D.z - uLength);
-    float3 z2 = float3(z2D.xy, z2D.z + uLength);
+    float3 x1 = float3(x1D.x - 1.0f, x1D.yz);
+    float3 x2 = float3(x2D.x + 1.0f, x2D.yz);
+    float3 z1 = float3(z1D.xy, z1D.z - 1.0f);
+    float3 z2 = float3(z2D.xy, z2D.z + 1.0f);
     // 计算切向量和法线
     float3 tangetX = x2 - x1;
     float3 tangetZ = z2 - z1;
