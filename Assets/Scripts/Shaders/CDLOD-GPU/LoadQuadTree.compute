@@ -1,6 +1,6 @@
 ﻿#pragma kernel TraverseQuadTree
 #pragma kernel CreatePatches
-#pragma kernel MorphArea
+// #pragma kernel MorphArea
 
 #include "Struct.compute"
 
@@ -9,13 +9,13 @@ ConsumeStructuredBuffer<uint2> consumeNodeList;
 AppendStructuredBuffer<uint2> appendNodeList;
 // z表示LOD等级
 AppendStructuredBuffer<uint3> appendFinalNodeList;
-// 保存节点关键信息
-RWStructuredBuffer<NodeDescription> nodeInfoList;
 Texture2D<float4> minMaxHeightRT;
 // 存放最终的叶子节点数据,xy存储二维索引，z存储lodLevel
 RWStructuredBuffer<uint3> finalNodeList;
 // 存储四叉树
 RWTexture2D<float4> quadTreeRT;
+// 存储LOD层级
+RWTexture2D<float4> lodRT;
 int maxLodOffset;
 uint mipSize;
 
@@ -30,8 +30,9 @@ uniform float controllerC;// 用户可控制系数
 - nodeSize为Node的边长(米)
 - nodeCount等于WorldSize/nodeSize
 - patchExtent等于nodeSize/16,用于计算包围盒的半高宽
+- eachNodeContainSector等于2^lod,用于计算morph area计算过渡
 */
-uniform float3 worldLodParams[6];
+uniform float4 worldLodParams[6];
 uniform uint offsetOfNodeID[6];
 /* 裁剪相关变量 */
 uniform float4 cameraFrustumPlanes[6];
@@ -39,9 +40,8 @@ AppendStructuredBuffer<RenderPatch> culledPatchList;
 
 uint GetNodeID(uint2 nodeLodCount, uint lodLevel);
 float GetNodeSize(uint lodLevel);
-float GetNodeSumDistance(uint lodLevel);
 float GetNodeCount(uint lodLevel);
-// float GetPatchExtent(uint lodLevel);
+uint GetEachNodeContainSector(uint lodLevel);
 bool EvaluateNode(uint2 nodeLodCount, uint lodLevel);
 float2 NodeCenterPos(uint2 nodeLodCount, uint lodLevel);
 float3 GetNodeCenterPos(uint2 nodeLodCount, uint lodLevel);
@@ -59,21 +59,17 @@ Bounds GetPatchBounds(RenderPatch patch);
 4. Dispatch结束, 将当前PassLOD减1，互换ConsumeNodeList和AppendNodeList，回到1执行下一个Pass
 */
 [numthreads(1, 1, 1)]
-void TraverseQuadTree(uint3 id : SV_DispatchThreadID){
+void TraverseQuadTree(uint3 id : SV_DISPATCHTHREADID){
     uint2 nodeLodCount = consumeNodeList.Consume();
     uint nodeID = GetNodeID(nodeLodCount, curLOD);
-    NodeDescription nodeDesc = nodeInfoList[nodeID];
     if (curLOD > 0 && EvaluateNode(nodeLodCount, curLOD)){
         appendNodeList.Append(nodeLodCount * 2 + uint2(0, 0));
         appendNodeList.Append(nodeLodCount * 2 + uint2(1, 0));
         appendNodeList.Append(nodeLodCount * 2 + uint2(0, 1));
         appendNodeList.Append(nodeLodCount * 2 + uint2(1, 1));
-        nodeDesc.isLeaf = 0;
     } else {
         appendFinalNodeList.Append(uint3(nodeLodCount, curLOD));
-        nodeDesc.isLeaf = 1;
     }
-    nodeInfoList[nodeID] = nodeDesc;
 }
 
 /*
@@ -90,15 +86,9 @@ void CreatePatches(uint3 id : SV_DISPATCHTHREADID, uint3 groupId : SV_GROUPID, u
     // 生成patch
     RenderPatch patch = GeneratePatch(nodeLodCount, patchOffset);
     Bounds bound = GetPatchBounds(patch);
-    if (FrustmCull(cameraFrustumPlanes, bound))
-        return;
+    // if (FrustmCull(cameraFrustumPlanes, bound))
+    //     return;
     culledPatchList.Append(patch);
-}
-
-// TODO: Morph Area 弥合接缝
-[numthreads(8, 8, 1)]
-void MorphArea(uint3 id : SV_DISPATCHTHREADID){
-
 }
 
 // TODO: Hierarchical Z-Buffering Occlusion Culling
@@ -118,6 +108,10 @@ float GetNodeExtent(uint lodLevel){
     return worldLodParams[lodLevel].z;
 }
 
+uint GetEachNodeContainSector(uint lodLevel){
+    return worldLodParams[lodLevel].w;
+}
+
 float2 GetNodeCenterPos2(uint2 nodeLodCount, uint lodLevel){
     float nodeSize = GetNodeSize(lodLevel);
     float nodeCount = GetNodeCount(lodLevel);
@@ -126,7 +120,7 @@ float2 GetNodeCenterPos2(uint2 nodeLodCount, uint lodLevel){
 
 float3 GetNodeCenterPos(uint2 nodeLodCount, uint lodLevel){
     float2 temp = GetNodeCenterPos2(nodeLodCount, lodLevel);
-    float2 minMaxHeight = minMaxHeightRT.mips[lodLevel + 2][nodeLodCount].xy;
+    float2 minMaxHeight = minMaxHeightRT.mips[lodLevel + 1][nodeLodCount].xy;
     float height = (minMaxHeight.x + minMaxHeight.y) * 0.5 * worldSize.y;
     return float3(temp.x, height, temp.y);
 }
@@ -147,7 +141,7 @@ RenderPatch GeneratePatch(uint3 nodeLodCount, uint2 offset){
     float2 nodeCenterPos = GetNodeCenterPos2(nodeLodCount.xy, lod);
 
     uint2 patchLodCount = nodeLodCount.xy * NODE_DIVIDE_PATCHES + offset;
-    float2 minMaxHeight = minMaxHeightRT.mips[lod + 2][patchLodCount].xy * worldSize.y + float2(-boundRedundance, boundRedundance);
+    float2 minMaxHeight = minMaxHeightRT.mips[lod + 1][patchLodCount].xy * worldSize.y + float2(-boundRedundance, boundRedundance);
     RenderPatch patch;
     patch.worldPos = nodeCenterPos + patchSize * (offset - (NODE_DIVIDE_PATCHES - 1) * 0.5);
     patch.minMaxHeight = minMaxHeight;

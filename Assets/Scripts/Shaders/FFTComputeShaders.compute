@@ -40,14 +40,14 @@ float Dispersion(float2 k);
 float2 ComplexMul(float2 com1, float2 com2);
 
 // 生成高斯分布图
-[numthreads(8, 8, 1)]
+[numthreads(32, 32, 1)]
 void ComputeGaussian(uint3 id : SV_DISPATCHTHREADID){
     float2 g = Gaussian(id.xy);
     gaussianRT[id.xy] = float4(g, 0, 0);
 }
 
 // 生成高度频率图
-[numthreads(8, 8, 1)]
+[numthreads(32, 32, 1)]
 void CreateHeightSpectrum(uint3 id : SV_DISPATCHTHREADID){
     float2 k = float2(2.0 * PI * id.x / textureSize - PI, 2.0 * PI * id.y / textureSize - PI);
     float2 gaussian = gaussianRT[id.xy].xy;
@@ -64,7 +64,7 @@ void CreateHeightSpectrum(uint3 id : SV_DISPATCHTHREADID){
 }
 
 // 生成XZ偏移距离频率图
-[numthreads(8, 8, 1)]
+[numthreads(32, 32, 1)]
 void CreateDisplaceSpectrum(uint3 id : SV_DISPATCHTHREADID){
     float2 k = float2(2 * PI * id.x / textureSize - PI, 2 * PI *id.y / textureSize - PI);
     k /= max(0.001, length(k));
@@ -76,7 +76,7 @@ void CreateDisplaceSpectrum(uint3 id : SV_DISPATCHTHREADID){
 }
 
 // X轴FFT
-[numthreads(8, 8, 1)]
+[numthreads(32, 32, 1)]
 void FFTHorizontal(uint3 id : SV_DISPATCHTHREADID){
     uint2 idxs = id.xy;
     // 计算出输入索引
@@ -90,7 +90,7 @@ void FFTHorizontal(uint3 id : SV_DISPATCHTHREADID){
     outputRT[id.xy] = float4(x0 + ComplexMul(x1, w), 0, 0);
 }
 
-[numthreads(8, 8, 1)]
+[numthreads(32, 32, 1)]
 void FFTHorizontalEnd(uint3 id :SV_DISPATCHTHREADID){
     uint2 idxs = id.xy;
     // 计算出输入索引
@@ -110,7 +110,7 @@ void FFTHorizontalEnd(uint3 id :SV_DISPATCHTHREADID){
 }
 
 // Y轴FFT
-[numthreads(8, 8, 1)]
+[numthreads(32, 32, 1)]
 void FFTVertical(uint3 id : SV_DISPATCHTHREADID){
     uint2 idxs = id.xy;
     // 计算出输入索引
@@ -124,7 +124,7 @@ void FFTVertical(uint3 id : SV_DISPATCHTHREADID){
     outputRT[id.xy] = float4(x0 + ComplexMul(x1, w), 0, 0);
 }
 
-[numthreads(8, 8, 1)]
+[numthreads(32, 32, 1)]
 void FFTVerticalEnd(uint3 id : SV_DISPATCHTHREADID){
     uint2 idxs = id.xy;
     // 计算出输入索引
@@ -144,7 +144,7 @@ void FFTVerticalEnd(uint3 id : SV_DISPATCHTHREADID){
 }
 
 // 生成偏移纹理贴图
-[numthreads(8, 8, 1)]
+[numthreads(32, 32, 1)]
 void GenerateDisplaceTexture(uint3 id : SV_DISPATCHTHREADID){
     float y = heightScale * length(heightSpectrumRT[id.xy].xy) / pow(textureSize, 2);
     float x = lambda * length(displaceXSpectrumRT[id.xy].xy) / pow(textureSize, 2);
@@ -152,7 +152,7 @@ void GenerateDisplaceTexture(uint3 id : SV_DISPATCHTHREADID){
     displaceRT[id.xy] = float4(x, y, z, 0);
 }
 
-[numthreads(8, 8, 1)]
+[numthreads(32, 32, 1)]
 void GenerateBubblesAndNormals(uint3 id : SV_DISPATCHTHREADID){
     // 获取当前点周围的四个点坐标
     uint2 uvX1 = uint2((id.x - 1.0 + textureSize) % textureSize, id.y);

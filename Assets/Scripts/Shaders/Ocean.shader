@@ -22,6 +22,8 @@ Shader "Custom/Ocean"
 		[HideInInspector]_Displace ("_Displace", 2D) = "white" {}
 		[HideInInspector]_Normal("_Normal", 2D) = "white" {}
 		[HideInInspector]_Bubbles("_Bubbles", 2D) = "White" {}
+		[Header(Morph Area)]
+		_MorphStartRatio("MorphStartRatio", Range(0, 1)) = 0.667
 	}
 	SubShader
 	{
@@ -52,7 +54,9 @@ Shader "Custom/Ocean"
 			};
 
 			StructuredBuffer<RenderPatch> patchList;
+			uniform float3 cameraPos;
 			uniform float3 worldSize;
+			uniform float controllerC;
 			fixed4 _ShallowColor;
 			fixed4 _DeepColor;
 			fixed4 _BubbleColor;
@@ -69,6 +73,7 @@ Shader "Custom/Ocean"
 			float _SubSurfacePower;
 			float _SubSurfaceScale;
 			fixed4 _SubSurfaceColor;
+			fixed _MorphStartRatio;
 
 			static half3 quadTreeDebugs[6] = {
 				half3(1, 0, 0),
@@ -80,12 +85,27 @@ Shader "Custom/Ocean"
 			};
 
 			inline void GetRealUV(inout float2 uv, float2 worldPos, float scale){
-				float2 startPos = worldPos - scale * float2(4, 4) + float2(4096, 4096);
+				float2 startPos = (worldPos + float2(4096, 4096) - scale * float2(4, 4)) % 512;
 				float ratio = scale / 64;
-				startPos.x -= (uint)(startPos.x + 1e-5) / 512 * 512;
-				startPos.y -= (uint)(startPos.y + 1e-5) / 512 * 512;
 				uv *= ratio;
 				uv += startPos / 512;
+			}
+
+			inline float getMorphValue(uint lodLevel, float dist, float ratio)
+			{
+				float low = 0.0f;
+    			low = 64 * controllerC * pow(2, lodLevel) - 1;
+    			float high = 64 * controllerC * pow(2, lodLevel + 1) - 1;
+    			float delta = high - low;
+    			float a = (dist - low) / delta;
+    			return 1.0f - clamp(a / ratio, 0.0f, 1.0f);
+			}
+
+			inline float2 MorphArea(float2 worldPos, uint lodLevel, float dist, float ratio)
+			{
+				float morphValue = getMorphValue(lodLevel, dist, ratio);
+				float2 fraction = frac(worldPos * 0.5 * 32.0) * 2.0 / 32.0;
+				return morphValue * fraction;
 			}
 
 			v2f vert(input v, uint instanceID : SV_INSTANCEID){
@@ -98,6 +118,9 @@ Shader "Custom/Ocean"
 				o.uv = TRANSFORM_TEX(v.uv, _Displace);
 				float4 displace = tex2Dlod(_Displace, float4(o.uv, 0, 0));
 				v.vertex += float4(displace.xyz, 0);
+				float dist = distance(v.vertex.xyz, cameraPos);
+				v.vertex.xz -= MorphArea(patch.worldPos, patch.lodLevel, dist, _MorphStartRatio);
+
 				o.pos = UnityObjectToClipPos(v.vertex);
 				o.worldPos = mul(unity_ObjectToWorld, v.vertex).xyz;
 				o.debugCol = half3(1, 1, 1);

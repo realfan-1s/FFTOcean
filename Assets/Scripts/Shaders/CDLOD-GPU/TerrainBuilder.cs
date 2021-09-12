@@ -43,6 +43,16 @@ public class TerrainBase
             return _minMaxHeightRT;
         }
     }
+    private static RenderTexture _lodRT;
+    public static RenderTexture lodRT
+    {
+        get
+        {
+            if (_lodRT == null)
+                _lodRT = Ocean.CreateRT((int)Mathf.Pow(2, MAX_LOD_DEPTH) * MAX_LOD_COUNT, RenderTextureFormat.R8);
+            return _lodRT;
+        }
+    }
     public TerrainBase(RenderTexture _minMaxHeightMaps, Vector3 _worldSize)
     {
         _minMaxHeightRT = _minMaxHeightMaps;
@@ -75,12 +85,12 @@ public class TerrainBuilder : IDisposable
     #region "Compute shader kernel"
     private static readonly int kernelTraverseQuadTree = quadTreeCS.FindKernel("TraverseQuadTree");
     private static readonly int kernelCreatePatches = quadTreeCS.FindKernel("CreatePatches");
+    // private static readonly int kernelMorphArea = quadTreeCS.FindKernel("MorphArea");
     #endregion
     #region "Compute Buffer"
     // 具体参考https://docs.unity.cn/cn/2021.1/ScriptReference/ComputeBuffer.html
     private ComputeBuffer consumeNodeList;
     private ComputeBuffer appendNodeList;
-    private ComputeBuffer nodeInfoList;
     private ComputeBuffer finalNodeList;
     private ComputeBuffer maxNodeList;
     private ComputeBuffer _culledPatchList;
@@ -129,7 +139,7 @@ public class TerrainBuilder : IDisposable
     }
     #endregion
     public TerrainBuilder(RenderTexture _minMaxHeightMaps, Vector3 _worldSize,
-    int _maxBufferSize = 400, int _maxLodSize = 4, int _lodCount = 6)
+    int _maxBufferSize = 200, int _maxLodSize = 4, int _lodCount = 6)
     {
         maxLodSize = _maxLodSize;
         lodCount = _lodCount;
@@ -139,7 +149,6 @@ public class TerrainBuilder : IDisposable
         appendNodeList = new ComputeBuffer(50, 8, ComputeBufferType.Append);
         maxNodeList = new ComputeBuffer(TerrainBase.MAX_LOD_COUNT * TerrainBase.MAX_LOD_COUNT, 8, ComputeBufferType.Append);
         InitMaxLodData();
-        nodeInfoList = new ComputeBuffer((int)TerrainBase.MAX_NODE_ID, 4);
         finalNodeList = new ComputeBuffer(maxBufferSize, 12, ComputeBufferType.Append);
         _culledPatchList = new ComputeBuffer(maxBufferSize * 64, 20, ComputeBufferType.Append);
         _indirectArgs = new ComputeBuffer(3, 4, ComputeBufferType.IndirectArguments);
@@ -155,7 +164,6 @@ public class TerrainBuilder : IDisposable
         consumeNodeList.Dispose();
         maxNodeList.Dispose();
         appendNodeList.Dispose();
-        nodeInfoList.Dispose();
         finalNodeList.Dispose();
         _culledPatchList.Dispose();
         _indirectArgs.Dispose();
@@ -166,6 +174,7 @@ public class TerrainBuilder : IDisposable
         tb = new TerrainBase(_minMaxHeightMaps, worldSize);
         BindShader(kernelTraverseQuadTree);
         BindShader(kernelCreatePatches);
+        // BindShader(kernelMorphArea);
         InitWorldParams();
     }
     void InitWorldParams()
@@ -177,11 +186,12 @@ public class TerrainBuilder : IDisposable
         float[] lodRange = new float[TerrainBase.MAX_LOD_DEPTH + 1];
         int offset = 0;
 
-        for (int lod = TerrainBase.MAX_LOD_DEPTH; lod > -1; --lod)
+        for (int lod = TerrainBase.MAX_LOD_DEPTH; lod > -1; lod--)
         {
             float nodeSize = wSize / nodeCount;
             float halfExtent = nodeSize / 16.0f;
-            worldLodParams[lod] = new Vector4(nodeSize, nodeCount, halfExtent, 0);
+            float eachNodeContainSector = Mathf.Pow(2, lod);
+            worldLodParams[lod] = new Vector4(nodeSize, nodeCount, halfExtent, eachNodeContainSector);
 
             offsetOfNodeID[lod] = offset;
             offset += nodeCount * nodeCount;
@@ -212,7 +222,6 @@ public class TerrainBuilder : IDisposable
             quadTreeCS.SetBuffer(index, "consumeNodeList", consumeNodeList);
             quadTreeCS.SetBuffer(index, "appendNodeList", appendNodeList);
             quadTreeCS.SetBuffer(index, "appendFinalNodeList", finalNodeList);
-            quadTreeCS.SetBuffer(index, "nodeInfoList", nodeInfoList);
             quadTreeCS.SetTexture(index, "minMaxHeightRT", tb.minMaxHeightRT);
         }
         else if (index == kernelCreatePatches)
@@ -277,6 +286,8 @@ public class TerrainBuilder : IDisposable
             consumeNodeList = appendNodeList;
             appendNodeList = temp;
         }
+
+        // commandBuffer.DispatchCompute(quadTreeCS, kernelMorphArea, 4, 4, 1);
         commandBuffer.CopyCounterValue(finalNodeList, _indirectArgs, 0);
         commandBuffer.DispatchCompute(quadTreeCS, kernelCreatePatches, _indirectArgs, 0);
         commandBuffer.CopyCounterValue(_culledPatchList, _patchIndirectArgs, 4);

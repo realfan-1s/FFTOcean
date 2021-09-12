@@ -23,15 +23,17 @@ public class GPUTerrian : MonoBehaviour
         terrain = new TerrainBuilder(MinMaxTextureMgr.instance.GetMinMaxHeightRT(), worldSize);
         ocean.oceanMat.SetBuffer("patchList", terrain.culledPatchList);
         ocean.oceanShader.SetFloats("worldSize", new float[3] { meshSize, ocean.heightScale, meshSize });
-        terrain.conrollerC = this.nodeEvaluationDist;
+        SetControllerC();
     }
 
     // Update is called once per frame
     void Update()
     {
+        ocean.oceanMat.SetVector("cameraPos", Camera.main.transform.position);
         MinMaxTextureMgr.instance.RefreshInfos();
-        if (this.nodeEvaluationDist != terrain.conrollerC)
-            terrain.conrollerC = this.nodeEvaluationDist;
+        if (this.nodeEvaluationDist != terrain.conrollerC){
+            SetControllerC();
+        }
         if (this.boundRedundance != terrain.boundRedundance)
             terrain.boundRedundance = this.boundRedundance;
         if (patchDebug)
@@ -46,5 +48,9 @@ public class GPUTerrian : MonoBehaviour
     void OnDestroy()
     {
         terrain.Dispose();
+    }
+    void SetControllerC(){
+        terrain.conrollerC = this.nodeEvaluationDist;
+        ocean.oceanMat.SetFloat("controllerC", this.nodeEvaluationDist);
     }
 }

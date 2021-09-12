@@ -132,7 +132,7 @@ public class Ocean : MonoBehaviour
         // oceanShader.SetFloat("oceanLength", meshSize);
         // 计算高斯随机数
         oceanShader.SetTexture(kernelComputeGaussian, "gaussianRT", gaussianRT);
-        oceanShader.Dispatch(kernelComputeGaussian, fftSize / 8, fftSize / 8, 1);
+        oceanShader.Dispatch(kernelComputeGaussian, fftSize / 32, fftSize / 32, 1);
     }
     void ComputeOceanValues()
     {
@@ -152,13 +152,13 @@ public class Ocean : MonoBehaviour
         //生成高度频谱
         oceanShader.SetTexture(kernelCreateHeightSpectrum, "gaussianRT", gaussianRT);
         oceanShader.SetTexture(kernelCreateHeightSpectrum, "heightSpectrumRT", heightSpectrumRT);
-        oceanShader.Dispatch(kernelCreateHeightSpectrum, fftSize / 8, fftSize / 8, 1);
+        oceanShader.Dispatch(kernelCreateHeightSpectrum, fftSize / 32, fftSize / 32, 1);
 
         //生成偏移频谱
         oceanShader.SetTexture(kernelCreateDisplaceSpectrum, "heightSpectrumRT", heightSpectrumRT);
         oceanShader.SetTexture(kernelCreateDisplaceSpectrum, "displaceXSpectrumRT", displaceXSpectrumRT);
         oceanShader.SetTexture(kernelCreateDisplaceSpectrum, "displaceZSpectrumRT", displaceZSpectrumRT);
-        oceanShader.Dispatch(kernelCreateDisplaceSpectrum, fftSize / 8, fftSize / 8, 1);
+        oceanShader.Dispatch(kernelCreateDisplaceSpectrum, fftSize / 32, fftSize / 32, 1);
 
         // 横向FFT
         for (int i = 1; i <= fftRatio; ++i)
@@ -201,12 +201,12 @@ public class Ocean : MonoBehaviour
         oceanShader.SetTexture(kernelGenerateDisplaceTexture, "displaceXSpectrumRT", displaceXSpectrumRT);
         oceanShader.SetTexture(kernelGenerateDisplaceTexture, "displaceZSpectrumRT", displaceZSpectrumRT);
         oceanShader.SetTexture(kernelGenerateDisplaceTexture, "displaceRT", displaceRT);
-        oceanShader.Dispatch(kernelGenerateDisplaceTexture, fftSize / 8, fftSize / 8, 1);
+        oceanShader.Dispatch(kernelGenerateDisplaceTexture, fftSize / 32, fftSize / 32, 1);
 
         oceanShader.SetTexture(kernelGenerateBubblesAndNormals, "displaceRT", displaceRT);
         oceanShader.SetTexture(kernelGenerateBubblesAndNormals, "normalRT", normalRT);
         oceanShader.SetTexture(kernelGenerateBubblesAndNormals, "bubblesRT", bubbleRT);
-        oceanShader.Dispatch(kernelGenerateBubblesAndNormals, fftSize / 8, fftSize / 8, 1);
+        oceanShader.Dispatch(kernelGenerateBubblesAndNormals, fftSize / 32, fftSize / 32, 1);
         SetMaterial();
     }
     void SetMaterial()
@@ -227,7 +227,7 @@ public class Ocean : MonoBehaviour
     {
         oceanShader.SetTexture(kernel, "inputRT", input);
         oceanShader.SetTexture(kernel, "outputRT", outputRT);
-        oceanShader.Dispatch(kernel, fftSize / 8, fftSize / 8, 1);
+        oceanShader.Dispatch(kernel, fftSize / 32, fftSize / 32, 1);
         var temp = input;
         input = outputRT;
         outputRT = temp;

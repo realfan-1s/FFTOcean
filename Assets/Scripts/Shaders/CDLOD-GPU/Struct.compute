@@ -7,11 +7,6 @@
 // 一个Node拆分成8*8个小patches
 #define NODE_DIVIDE_PATCHES 8
 
-// 是否是叶子结点
-struct NodeDescription{
-    uint isLeaf;
-};
-
 struct RenderPatch{
     float2 worldPos;
     float2 minMaxHeight;
