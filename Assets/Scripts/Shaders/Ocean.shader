@@ -4,7 +4,7 @@
 */
 Shader "Custom/Ocean"
 {
-		Properties
+	Properties
 	{
 		_ShallowColor ("ShallowColor", Color) = (1,1,1,1)
 		_DeepColor("DeepColor", Color) = (1, 1, 1, 1)
@@ -177,7 +177,7 @@ Shader "Custom/Ocean"
 			}
 
 			half4 frag(v2f o) : SV_TARGET{
-				fixed3 normalDir = UnityObjectToWorldNormal(tex2D(_Normal, o.uv).rgb);
+				fixed3 normalDir = tex2D(_Normal, o.uv).rgb;
 				fixed3 lightDir = normalize(UnityWorldSpaceLightDir(o.worldPos));
 				fixed3 viewDir = normalize(UnityWorldSpaceViewDir(o.worldPos));
 				fixed3 reflectDir = normalize(reflect(-viewDir, normalDir));
@@ -203,7 +203,7 @@ Shader "Custom/Ocean"
 				half3 specualr = G * D * F;
 				fixed3 diffColor = albedo * oneMinusReflective;
 				fixed3 kd = (1 - F) * (1 - _Metalness);
-				fixed3 diffuse = kd * DisneyDiffuse(diffColor, _Roughness, ldoth, ndotl, ndotv);
+				fixed3 diffuse = kd * diffColor * UNITY_INV_PI;
 
 				half mipLevel = UNITY_SPECCUBE_LOD_STEPS * _Roughness * (1.7 - 0.7 * _Roughness);
 				half4 prefilterCol = UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0, reflectDir, mipLevel);
@@ -227,6 +227,7 @@ Shader "Custom/Ocean"
 				#if USE_PATCH_DEBUG
 				col = o.debugCol;
 				#endif
+				col = pow(col, 1 / 2.2f);
 				return half4(col, 1);
 			}
 			ENDCG

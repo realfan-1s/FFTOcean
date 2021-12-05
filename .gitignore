@@ -1,0 +1,10 @@
+# Get latest from https://github.com/github/gitignore/blob/master/Unity.gitignore
+#
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Bb]uild/
+*.sln
+*csproj
+.vs/
+.vscode/
